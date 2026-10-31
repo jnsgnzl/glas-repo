@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addons>
+<addon id="repository.glas" name="Glas Repository" version="1.0.1" provider-name="@jnsmstng">
+	<extension point="xbmc.addon.repository" name="Glas Repository">
+		<dir>
+			<info compressed="false">https://jnsgnzl.github.io/glas-repo/repo/addons.xml</info>
+			<checksum>https://jnsgnzl.github.io/glas-repo/repo/addons.xml.md5</checksum>
+			<datadir zip="true">https://jnsgnzl.github.io/glas-repo/repo/</datadir>
+			<hashes>sha256</hashes>
+		</dir>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary lang="de_DE">Updates für den Skin Glas und den Glas Helper</summary>
+		<summary lang="en_GB">Updates for the Glas skin and Glas Helper</summary>
+		<description lang="de_DE">Installiert den Skin Glas (Kodi 21 im Stil von tvOS) samt Glas Helper und hält beide aktuell.</description>
+		<description lang="en_GB">Installs the Glas skin (Kodi 21 in the style of tvOS) together with Glas Helper and keeps both up to date.</description>
+		<platform>all</platform>
+		<license>MIT</license>
+		<source>https://github.com/jnsgnzl/glas-repo</source>
+		<assets>
+			<icon>icon.png</icon>
+		</assets>
+	</extension>
+</addon>
+<addon id="script.glas.helper" name="Glas Helper" version="0.7.1" provider-name="@jnsmstng">
+	<requires>
+		<import addon="xbmc.python" version="3.0.1"/>
+		<!-- Weichgezeichnetes Fanart fuer den Hintergrund und Bildschirmschoner mit Apples Luftaufnahmen
+		     (beide im offiziellen Kodi-Repository, Kodi installiert sie mit) -->
+		<import addon="plugin.video.themoviedb.helper" version="5.4.0"/>
+		<import addon="screensaver.atv4" version="3.0.0"/>
+		<!-- "Naechste Folge" am Ende einer Folge (Fenster im Skin: script-upnext-*.xml). Nicht optional: Kodi installiert
+		     optionale Abhaengigkeiten nicht mit. Versionsangabe niedrig, weil das Repository "1.1.9+matrix.1" fuehrt -->
+		<import addon="service.upnext" version="1.1.0"/>
+		<!-- Apple-TV-Klaenge (Benutzeroberflaechenklaenge); Glas verteilt sie nicht selbst, Kodi holt sie aus dem Repository -->
+		<import addon="resource.uisounds.appletv" version="0.0.2"/>
+	</requires>
+	<!-- ohne <provides>: nur fuer den Skin (Profilliste), erscheint nicht unter den Apps -->
+	<extension point="xbmc.python.pluginsource" library="default.py">
+		<provides></provides>
+	</extension>
+	<extension point="xbmc.service" library="service.py" start="login"/>
+	<extension point="xbmc.addon.metadata">
+		<summary lang="de_DE">Hilfsdienste für den Skin Glas</summary>
+		<summary lang="en_GB">Helper services for the Glas skin</summary>
+		<description lang="de_DE">Liefert dem Skin Glas, was Kodi Skins sonst nicht anbietet: die Profile für das Kontrollzentrum und den weichgezeichneten Hintergrund für den Glaseffekt.</description>
+		<description lang="en_GB">Provides the Glas skin with what Kodi does not offer to skins: the profiles for the Control Center and the blurred background for the glass effect.</description>
+		<news>0.7.1: Zeilenzahl der Farbverwaltung für das Menü im Player</news>
+		<platform>all</platform>
+		<license>MIT</license>
+	</extension>
+</addon>
+<addon id="skin.glas" version="0.6.0" name="Glas" provider-name="@jnsmstng (basiert auf Estuary von phil65, Ichabod Fletchman)">
+	<requires>
+		<import addon="xbmc.gui" version="5.17.0"/>
+		<import addon="plugin.video.themoviedb.helper" version="5.4.0" optional="true"/>
+		<!-- fest: so holt Kodi beim Installieren aus dem Glas-Repository den Helper und dessen Abhaengigkeiten mit -->
+		<import addon="script.glas.helper" version="0.7.1"/>
+	</requires>
+	<extension point="xbmc.gui.skin" debugging="false">
+		<res width="1920" height="1440" aspect="4:3" default="false" folder="xml" />
+		<res width="1920" height="1280" aspect="3:2" default="false" folder="xml" />
+		<res width="1920" height="1200" aspect="16:10" default="false" folder="xml" />
+		<res width="2040" height="1080" aspect="17:9" default="false" folder="xml" />
+		<res width="1920" height="1080" aspect="16:9" default="true" folder="xml" />
+		<res width="2560" height="1080" aspect="21:9" default="false" folder="xml" />
+		<res width="2338" height="1080" aspect="19.5:9" default="false" folder="xml" />
+		<res width="2160" height="1080" aspect="18:9" default="false" folder="xml" />
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<platform>all</platform>
+		<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0</license>
+		<news>0.6.0: Mediathek mit nur einem Menü (Suchen, Ungesehen, Darstellung in der Liste), Spur- und Farbverwaltungsmenü passen in die 21:9-Leinwand, Absturz beim Wechsel auf 4K behoben. Mit dem Live-Glas-Kern 2026.10.29: Glas am Homescreen ohne Verzögerung, Lichtbrechung am Rand wie bei Apple, scharfe Schrift in verkleinerten Flächen</news>
+		<assets>
+			<icon>resources/icon.png</icon>
+			<fanart>resources/fanart.jpg</fanart>
+		</assets>
+		<summary lang="de_DE">Glas: ein Kodi-Skin im Stil von tvOS, basierend auf Estuary.</summary>
+		<summary lang="en_GB">Glas: a tvOS-inspired Kodi skin based on Estuary.</summary>
+		<description lang="de_DE">Persönlicher Umbau von Estuary (Kodi 21 Omega) mit Glas-Paneelen, weißem Fokus und Inter als Schrift. Ziel ist ein einheitlicher Stil auf allen Seiten.</description>
+		<description lang="en_GB">Personal rework of Estuary (Kodi 21 Omega) with glass panels, white focus and Inter as typeface, aiming for one consistent style on every screen.</description>
+	</extension>
+</addon>
+</addons>

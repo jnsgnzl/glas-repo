@@ -1,0 +1,24 @@
+{
+  "builds": [
+    {
+      "id": "2026.10.17",
+      "device": "vero5",
+      "osmc": "21.3.0-7",
+      "url": "https://github.com/jnsgnzl/glas-repo/releases/download/core-2026.10.17/kodi.bin.xz",
+      "sha256": "f0e9a35240001fc6880dc11f39224ee17184bde7ac7b7116dcc3202202ae9c42",
+      "size": 47171636,
+      "xz_size": 14019068,
+      "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-2026.10.17"
+    },
+    {
+      "id": "2026.10.29",
+      "device": "vero5",
+      "osmc": "21.3.0-7",
+      "url": "https://github.com/jnsgnzl/glas-repo/releases/download/core-2026.10.29/kodi.bin.xz",
+      "sha256": "a818813a58e603a06375dff5c41a8d5104c0a69c84f7cdc4508e3cd6cee1dfa5",
+      "size": 47204440,
+      "xz_size": 14027116,
+      "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-2026.10.29"
+    }
+  ]
+}
