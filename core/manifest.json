@@ -21,6 +21,16 @@
       "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-2026.10.29"
     },
     {
+      "id": "2026.11.01.2",
+      "device": "vero5",
+      "osmc": "21.3.0-7",
+      "url": "https://github.com/jnsgnzl/glas-repo/releases/download/core-2026.11.01.2/kodi.bin.xz",
+      "sha256": "2a28599c852b04cb1875a811f37fce878a45ea5e594941bd8a8c4486dfa36996",
+      "size": 47212632,
+      "xz_size": 14038688,
+      "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-2026.11.01.2"
+    },
+    {
       "id": "2026.11.01",
       "device": "win64",
       "kodi": "21.3",
