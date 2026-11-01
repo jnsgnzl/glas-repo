@@ -22,7 +22,7 @@
 		</assets>
 	</extension>
 </addon>
-<addon id="script.glas.helper" name="Glas Helper" version="0.7.1" provider-name="@jnsmstng">
+<addon id="script.glas.helper" name="Glas Helper" version="0.8.0" provider-name="@jnsmstng">
 	<requires>
 		<import addon="xbmc.python" version="3.0.1"/>
 		<!-- Weichgezeichnetes Fanart fuer den Hintergrund und Bildschirmschoner mit Apples Luftaufnahmen
@@ -45,17 +45,17 @@
 		<summary lang="en_GB">Helper services for the Glas skin</summary>
 		<description lang="de_DE">Liefert dem Skin Glas, was Kodi Skins sonst nicht anbietet: die Profile für das Kontrollzentrum und den weichgezeichneten Hintergrund für den Glaseffekt.</description>
 		<description lang="en_GB">Provides the Glas skin with what Kodi does not offer to skins: the profiles for the Control Center and the blurred background for the glass effect.</description>
-		<news>0.7.1: Zeilenzahl der Farbverwaltung für das Menü im Player</news>
+		<news>0.8.0: Live-Glas-Kern auch für Windows x64 installieren, aktualisieren und entfernen; Glas für 16:10-Bildschirme; Live-Glas nur, wenn der laufende Kodi-Kern es kann</news>
 		<platform>all</platform>
 		<license>MIT</license>
 	</extension>
 </addon>
-<addon id="skin.glas" version="0.6.0" name="Glas" provider-name="@jnsmstng (basiert auf Estuary von phil65, Ichabod Fletchman)">
+<addon id="skin.glas" version="0.7.0" name="Glas" provider-name="@jnsmstng (basiert auf Estuary von phil65, Ichabod Fletchman)">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0"/>
 		<import addon="plugin.video.themoviedb.helper" version="5.4.0" optional="true"/>
 		<!-- fest: so holt Kodi beim Installieren aus dem Glas-Repository den Helper und dessen Abhaengigkeiten mit -->
-		<import addon="script.glas.helper" version="0.7.1"/>
+		<import addon="script.glas.helper" version="0.8.0"/>
 	</requires>
 	<extension point="xbmc.gui.skin" debugging="false">
 		<res width="1920" height="1440" aspect="4:3" default="false" folder="xml" />
@@ -70,7 +70,7 @@
 	<extension point="xbmc.addon.metadata">
 		<platform>all</platform>
 		<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0</license>
-		<news>0.6.0: Mediathek mit nur einem Menü (Suchen, Ungesehen, Darstellung in der Liste), Spur- und Farbverwaltungsmenü passen in die 21:9-Leinwand, Absturz beim Wechsel auf 4K behoben. Mit dem Live-Glas-Kern 2026.10.29: Glas am Homescreen ohne Verzögerung, Lichtbrechung am Rand wie bei Apple, scharfe Schrift in verkleinerten Flächen</news>
+		<news>0.7.0: Live-TV im Glas-Stil, YouTube-Suche als Glas-Seite, Bedienung mit der Maus (Seitenleiste, Kapsel, Staffel-Pfeil, Startseite), volle Breite auf 21:9-Monitoren und volle Höhe auf 16:10, engere Rasterzeilen, Zurück-Kachel, Inhaltsangabe in Sammlungen, Staffelposter (Einstellung), Beenden im Kontrollzentrum unter Windows. Live-Glas jetzt auch unter Windows (Glas-Einstellungen › Live-Glas-Kern).</news>
 		<assets>
 			<icon>resources/icon.png</icon>
 			<fanart>resources/fanart.jpg</fanart>
