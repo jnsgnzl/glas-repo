@@ -41,6 +41,16 @@
       "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-2026.11.03"
     },
     {
+      "id": "2026.11.03.2",
+      "device": "vero5",
+      "osmc": "21.3.0-7",
+      "url": "https://github.com/jnsgnzl/glas-repo/releases/download/core-2026.11.03.2/kodi.bin.xz",
+      "sha256": "fe6da0cc40312cc7a41d08e838c7aa622c530f7143c5eb7c6a3fc36584a8b5d0",
+      "size": 47212632,
+      "xz_size": 14041780,
+      "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-2026.11.03.2"
+    },
+    {
       "id": "2026.11.01",
       "device": "win64",
       "kodi": "21.3",
@@ -83,6 +93,17 @@
       "size": 45634048,
       "xz_size": 14190324,
       "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-win-2026.11.03"
+    },
+    {
+      "id": "2026.11.03.2",
+      "device": "win64",
+      "kodi": "21.3",
+      "kodi_sha256": "fef16f362aa405ab83fe7e7f34948c3b062df9d0701eb883f7834301562fe0ae",
+      "url": "https://github.com/jnsgnzl/glas-repo/releases/download/core-win-2026.11.03.2/kodi.exe.xz",
+      "sha256": "08351143d5264d72f0da1f90b9e301dda07e7d258e861d0d3c2e4dc1452c9edf",
+      "size": 45634048,
+      "xz_size": 14185184,
+      "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-win-2026.11.03.2"
     }
   ]
 }

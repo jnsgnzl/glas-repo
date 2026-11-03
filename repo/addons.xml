@@ -50,7 +50,7 @@
 		<license>MIT</license>
 	</extension>
 </addon>
-<addon id="skin.glas" version="0.8.0" name="Glas" provider-name="@jnsmstng (basiert auf Estuary von phil65, Ichabod Fletchman)">
+<addon id="skin.glas" version="0.8.1" name="Glas" provider-name="@jnsmstng (basiert auf Estuary von phil65, Ichabod Fletchman)">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0"/>
 		<import addon="plugin.video.themoviedb.helper" version="5.4.0" optional="true"/>
@@ -70,7 +70,7 @@
 	<extension point="xbmc.addon.metadata">
 		<platform>all</platform>
 		<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0</license>
-		<news>0.8.0: Neue Darstellung Hell (Glas-Einstellungen › Darstellung: Dunkel, Hell oder Automatisch nach Sonnenstand), auch mit „Kontrast erhöhen“ und „Transparenz reduzieren“. Laufende Wiedergabe außerhalb des Players: Banner beim Start und Fortsetzen, Symbol an der Uhr, Wiedergabe-Karte im Kontrollzentrum. Neue Bildschirmtastatur und Zifferneingabe, überarbeitete Schriftgrößen, Ansichten, Menüs und Animationen. Ruhezustandstimer mit 2 Std., 1 Std., 30 und 15 Min. Seiten von Video-Add-ons (YouTube, ARD, ZDF) im Glas-Stil. Eigenes Fenster „Intro überspringen“ für Up Next. EPG-Suche ohne überlappende Filter und ohne „?0?“. Leinwand-Modus: eigene Balken werden richtig berücksichtigt, Suche passt in den Streifen. Behoben: Flackern im Kontrollzentrum, doppeltes Cover beim Schließen des Kontextmenüs, Mausbedienung in Seitenleisten und auf dem Homescreen, Zeilen der Seitenleiste lösen wieder aus. Mit Live-Glas-Kern 2026.11.03: runde Glasecken auf der Vero, ruhige Listen, Glas über HDR-Filmen nicht mehr zu hell, kein „Inhalt anzeigen“ mehr bei ISO-Dateien.</news>
+		<news>0.8.1: Ohne eigenen Kern kein dunkler Kasten mehr um die Uhr. Maus: Klick neben einen geöffneten Ordner auf dem Homescreen schließt ihn; Kacheln in der unten angeschnittenen Reihe lassen sich anklicken und überfahren; nach dem Schließen des Kontrollzentrums mit einem Klick daneben bleibt die Uhr unmarkiert. Mit Live-Glas-Kern 2026.11.03.2: die Kapsel des Kontrollzentrums behält beim Öffnen und Schließen ihre runden Enden.</news>
 		<assets>
 			<icon>resources/icon.png</icon>
 			<fanart>resources/fanart.jpg</fanart>
