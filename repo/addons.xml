@@ -22,7 +22,7 @@
 		</assets>
 	</extension>
 </addon>
-<addon id="script.glas.helper" name="Glas Helper" version="0.9.1" provider-name="@jnsmstng">
+<addon id="script.glas.helper" name="Glas Helper" version="0.10.0" provider-name="@jnsmstng">
 	<requires>
 		<import addon="xbmc.python" version="3.0.1"/>
 		<!-- Weichgezeichnetes Fanart fuer den Hintergrund und Bildschirmschoner mit Apples Luftaufnahmen
@@ -45,12 +45,12 @@
 		<summary lang="en_GB">Helper services for the Glas skin</summary>
 		<description lang="de_DE">Liefert dem Skin Glas, was Kodi Skins sonst nicht anbietet: die Profile für das Kontrollzentrum und den weichgezeichneten Hintergrund für den Glaseffekt.</description>
 		<description lang="en_GB">Provides the Glas skin with what Kodi does not offer to skins: the profiles for the Control Center and the blurred background for the glass effect.</description>
-		<news>0.9.1: Leinwand-Modus: Untertitel stehen über dem unteren Balken statt dahinter (eigene Abstände bleiben, „Manuell“ bleibt unberührt). 0.9.0:Darstellung Dunkel, Hell oder Automatisch (wechselt nach Sonnenstand, nie während eines Films oder bei offenem Dialog); Ruhezustandstimer 2 Std., 1 Std., 30 und 15 Min., „Aus“ nur bei laufendem Timer; Untertitel-Menü mit Sprachauswahl; Mausrad im Homescreen wie Hoch/Runter.</news>
+		<news>0.10.0: Quellen und Bereiche im Hauptmenü, Dock mit 8 Plätzen, Beenden wahlweise ohne Rückfrage, „Weiter ansehen“ lädt nach dem Markieren neu, Merkliste und Info im Titelbild, Spulvorschau-Bilder werden aufgeräumt, Status „Aktiv (eigener Build)“ für selbst eingespielte Kerne. 0.9.1: Leinwand-Modus: Untertitel stehen über dem unteren Balken statt dahinter (eigene Abstände bleiben, „Manuell“ bleibt unberührt). 0.9.0:Darstellung Dunkel, Hell oder Automatisch (wechselt nach Sonnenstand, nie während eines Films oder bei offenem Dialog); Ruhezustandstimer 2 Std., 1 Std., 30 und 15 Min., „Aus“ nur bei laufendem Timer; Untertitel-Menü mit Sprachauswahl; Mausrad im Homescreen wie Hoch/Runter.</news>
 		<platform>all</platform>
 		<license>MIT</license>
 	</extension>
 </addon>
-<addon id="skin.glas" version="0.9.0" name="Glas" provider-name="@jnsmstng (basiert auf Estuary von phil65, Ichabod Fletchman)">
+<addon id="skin.glas" version="0.10.0" name="Glas" provider-name="@jnsmstng (basiert auf Estuary von phil65, Ichabod Fletchman)">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0"/>
 		<import addon="plugin.video.themoviedb.helper" version="5.4.0" optional="true"/>
@@ -70,7 +70,7 @@
 	<extension point="xbmc.addon.metadata">
 		<platform>all</platform>
 		<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0</license>
-		<news>0.9.0: Spulen mit Vorschau: Links/Rechts verschiebt das Ziel, ein Vorschaubild zeigt die Stelle, Auswählen springt hin, Zurück bricht ab. Leinwand-Modus: Untertitel über dem unteren Balken. Mit Live-Glas-Kern 2026.11.05: Kontextmenü neben der Kachel, „Nein“ vorausgewählt bei Löschen und Entfernen, weichere Bewegungen, Kapitelbilder aus Blu-ray-ISOs, Hauptfilm direkt aus der NFO.</news>
+		<news>0.10.0: Neue Gruppe „Zusätzliche Funktionen“ in Darstellung (alles standardmäßig aus): Buchstabenleiste in der Mediathek, Zurück-Kapsel in allen Ansichten, Dock mit 8 Plätzen (21:9), Titel zentriert, längere Inhaltsangabe bei Folgen, Sammlungen als eine Reihe mit Inhaltsangabe, Videoquellen als Kacheln im Hauptmenü; dazu „Sofort beenden“ (an) und „Bereiche im Hauptmenü“ (TV, Musik, Bilder usw. ausblendbar). Kapseln „‹ Filme“ und „‹ Serien“, Nachfedern am Ende der Mediathek-Liste, „Weiter ansehen“ aktualisiert sich, Haken bei gesehenen Serien und Staffeln, Genre-Filter mit der Maus, Kontextmenü auf dem Homescreen neben der Kachel, Logo-Poster, Merkliste, Abzeichen „Neu“, bewegte Wellenform bei laufender Wiedergabe, Leinwand-Modus auch für Musik und Bilder. Mit Live-Glas-Kern 2026.11.06: Buchstaben-Sprung, deutlich schnellere Spulvorschau bei 4K und Blu-ray-ISOs, Mausrad in der Mediathek-Liste (Windows); Live-Glas schaltet sich beim ersten Kern selbst ein. 0.9.0: Spulen mit Vorschau: Links/Rechts verschiebt das Ziel, ein Vorschaubild zeigt die Stelle, Auswählen springt hin, Zurück bricht ab. Leinwand-Modus: Untertitel über dem unteren Balken. Mit Live-Glas-Kern 2026.11.05: Kontextmenü neben der Kachel, „Nein“ vorausgewählt bei Löschen und Entfernen, weichere Bewegungen, Kapitelbilder aus Blu-ray-ISOs, Hauptfilm direkt aus der NFO.</news>
 		<assets>
 			<icon>resources/icon.png</icon>
 			<fanart>resources/fanart.jpg</fanart>
