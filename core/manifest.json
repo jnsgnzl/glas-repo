@@ -146,6 +146,17 @@
       "size": 45695488,
       "xz_size": 14202048,
       "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-win-2026.11.06"
+    },
+    {
+      "id": "2026.11.06.2",
+      "device": "win64",
+      "kodi": "21.3",
+      "kodi_sha256": "fef16f362aa405ab83fe7e7f34948c3b062df9d0701eb883f7834301562fe0ae",
+      "url": "https://github.com/jnsgnzl/glas-repo/releases/download/core-win-2026.11.06.2/kodi.exe.xz",
+      "sha256": "6f84455d6e628ad866681b744020b9e64accad1ab7543562bb532e6709c97651",
+      "size": 45696000,
+      "xz_size": 14203604,
+      "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-win-2026.11.06.2"
     }
   ]
 }
