@@ -1,0 +1,1994 @@
+Glas-Patches, die beide Bau-Skripte gleich anwenden (Windows: windows/apply-glas.ps1, Vero: apply-glas.sh ueber
+glas-patches.pl). Alle plattformfrei. Laufen nach den uebrigen Patches; Dateien, die sonst niemand patcht, setzen die
+Skripte vorher auf den Kodi-Stand zurueck.
+
+Aufbau eines Blocks (alles ausserhalb von Bloecken ist Kommentar):
+  @@ after|before|replace <Datei> | <Name fuer Meldungen>
+  <Anker: ganze Zeilen, muss genau so in der Datei stehen>
+  @@--
+  <Einsatz: ganze Zeilen; after = hinter dem Anker, before = davor, replace = statt des Ankers>
+  @@end
+Steht der Einsatz schon in der Datei, wird der Block uebersprungen (wiederholbar). Fehlt der Anker, bricht der Lauf ab.
+
+=====================================================================================================================
+Wachsen um feste Pixel: Effekt grow (src/xbmc/guilib/GlasGrow.h)
+=====================================================================================================================
+
+@@ after xbmc/guilib/VisibleEffect.cpp | grow include
+#include "Tween.h"
+@@--
+#include "GlasGrow.h" // Glas: Effekt grow
+@@end
+
+@@ before xbmc/guilib/VisibleEffect.cpp | grow Klasse
+CAnimation::CAnimation()
+{
+@@--
+// Glas: Effekt grow (GlasGrow.h) - Flaeche um feste Pixel je Seite wachsen lassen. Keine Transformation (die Schrift
+// bleibt): RenderAnimation meldet den aktuellen Wert, Bild und Knopf vergroessern damit ihre Texturen.
+// start/end: Pixel je Seite, "x,y" fuer getrennte Achsen
+class CGlasGrowEffect : public CAnimEffect
+{
+public:
+  explicit CGlasGrowEffect(const TiXmlElement* node) : CAnimEffect(node, EFFECT_TYPE_NONE)
+  {
+    Parse(node->Attribute("start"), m_startX, m_startY);
+    Parse(node->Attribute("end"), m_endX, m_endY);
+  }
+  float X() const { return m_x; }
+  float Y() const { return m_y; }
+
+private:
+  static void Parse(const char* value, float& x, float& y)
+  {
+    if (!value)
+      return;
+    const std::vector<std::string> params = StringUtils::Split(value, ",");
+    if (!params.empty())
+      x = y = static_cast<float>(std::atof(params[0].c_str()));
+    if (params.size() > 1)
+      y = static_cast<float>(std::atof(params[1].c_str()));
+  }
+  void ApplyEffect(float offset, const CPoint& center) override
+  {
+    m_x = m_startX + (m_endX - m_startX) * offset;
+    m_y = m_startY + (m_endY - m_startY) * offset;
+  }
+
+  float m_startX = 0.0f;
+  float m_startY = 0.0f;
+  float m_endX = 0.0f;
+  float m_endY = 0.0f;
+  float m_x = 0.0f;
+  float m_y = 0.0f;
+};
+
+@@end
+
+@@ replace xbmc/guilib/VisibleEffect.cpp | grow Kopie
+      newEffect = new CRotateEffect(*static_cast<CRotateEffect*>(src.m_effects[i]));
+    if (newEffect)
+@@--
+      newEffect = new CRotateEffect(*static_cast<CRotateEffect*>(src.m_effects[i]));
+    else if (const auto* glasGrow = dynamic_cast<const CGlasGrowEffect*>(src.m_effects[i]))
+      newEffect = new CGlasGrowEffect(*glasGrow); // Glas: grow (Listen-Layouts kopieren ihre Controls)
+    if (newEffect)
+@@end
+
+@@ replace xbmc/guilib/VisibleEffect.cpp | grow RenderAnimation
+    for (unsigned int i = 0; i < m_effects.size(); i++)
+      matrix *= m_effects[i]->GetTransform();
+@@--
+    for (unsigned int i = 0; i < m_effects.size(); i++)
+    {
+      matrix *= m_effects[i]->GetTransform();
+      // Glas: grow meldet sein Wachstum dem Control (GlasGrow.h, CGUIControl::Animate)
+      if (const auto* glasGrow = dynamic_cast<const CGlasGrowEffect*>(m_effects[i]))
+        GLAS_GROW::Add(glasGrow->X(), glasGrow->Y());
+    }
+@@end
+
+@@ after xbmc/guilib/VisibleEffect.cpp | grow AddEffect
+  else if (StringUtils::EqualsNoCase(type, "zoom"))
+    effect = new CZoomEffect(node, rect);
+@@--
+  else if (StringUtils::EqualsNoCase(type, "grow")) // Glas: Flaeche um feste Pixel (GlasGrow.h)
+    effect = new CGlasGrowEffect(node);
+@@end
+
+@@ after xbmc/guilib/GUIControl.cpp | grow include
+#include "GUIControl.h"
+@@--
+#include "GlasFade.h" // Glas: Kurve von fadetime
+#include "GlasFit.h" // Glas: <fititems>
+#include "GlasFocusItem.h" // Glas: Kontextmenue neben der Kachel
+#include "GlasGrow.h" // Glas: Effekt grow
+@@end
+
+@@ replace xbmc/guilib/GUIControl.cpp | grow Destruktor
+CGUIControl::~CGUIControl(void) = default;
+@@--
+CGUIControl::~CGUIControl(void)
+{
+  // Glas: Eintraege zu diesem Control vergessen (die Adresse kann wiederverwendet werden)
+  GLAS_GROW::Forget(this);
+  GLAS_FIT::Forget(this);
+  GLAS_FOCUSITEM::Forget(this);
+  GLAS_FADE::Forget(this);
+}
+@@end
+
+@@ after xbmc/guilib/GUIControl.cpp | grow Animate Beginn
+  m_transform.Reset();
+  bool changed = false;
+@@--
+  GLAS_GROW::Begin(); // Glas: grow-Effekte dieses Controls sammeln
+@@end
+
+@@ after xbmc/guilib/GUIControl.cpp | grow Animate Ende
+    //  CLog::Log(LOGDEBUG, "Animating control {}", m_controlID);
+    //}
+  }
+@@--
+  GLAS_GROW::End(this); // Glas: Wachstum fuer Bild und Knopf ablegen
+@@end
+
+@@ after xbmc/guilib/GUIImage.cpp | grow include
+#include "GUIImage.h"
+@@--
+#include "GlasGrow.h" // Glas: Effekt grow
+@@end
+
+@@ after xbmc/guilib/GUIImage.cpp | grow Process
+void CGUIImage::Process(unsigned int currentTime, CDirtyRegionList &dirtyregions)
+{
+@@--
+  // Glas: grow - Textur um feste Pixel je Seite (GlasGrow.h); die Lage setzt Kodi sonst nur in SetPosition
+  const CPoint glasGrow = GLAS_GROW::Peek(this);
+  if (GLAS_GROW::NeedsApply(this, glasGrow))
+  {
+    bool glasChanged = m_texture->SetPosition(m_posX - glasGrow.x, m_posY - glasGrow.y);
+    glasChanged |= m_texture->SetWidth(m_width + 2 * glasGrow.x);
+    glasChanged |= m_texture->SetHeight(m_height + 2 * glasGrow.y);
+    if (glasChanged)
+      MarkDirtyRegion();
+  }
+
+@@end
+
+@@ replace xbmc/guilib/GUIImage.cpp | grow Bereich
+  return CGUIControl::CalcRenderRegion().Intersect(region);
+@@--
+  // Glas: grow - die gewachsene Textur reicht ueber das Control hinaus
+  CRect glasRegion = CGUIControl::CalcRenderRegion();
+  const CPoint glasGrow = GLAS_GROW::Peek(this);
+  glasRegion.x1 -= glasGrow.x;
+  glasRegion.y1 -= glasGrow.y;
+  glasRegion.x2 += glasGrow.x;
+  glasRegion.y2 += glasGrow.y;
+  return glasRegion.Intersect(region);
+@@end
+
+@@ after xbmc/guilib/GUIButtonControl.cpp | grow include
+#include "GUIButtonControl.h"
+@@--
+#include "GlasGrow.h" // Glas: Effekt grow
+#include "ServiceBroker.h"
+#include "windowing/GraphicContext.h"
+#include "windowing/WinSystem.h"
+@@end
+
+@@ after xbmc/guilib/GUIButtonControl.cpp | grow Process
+    m_imgNoFocus->SetWidth(GetWidth());
+    m_imgNoFocus->SetHeight(m_height);
+  }
+@@--
+
+  // Glas: grow - Texturen um feste Pixel je Seite (GlasGrow.h); die Lage setzt Kodi sonst nur in SetPosition
+  const CPoint glasGrow = GLAS_GROW::Peek(this);
+  if (GLAS_GROW::NeedsApply(this, glasGrow))
+  {
+    const float glasX = m_posX - glasGrow.x;
+    const float glasY = m_posY - glasGrow.y;
+    const float glasW = GetWidth() + 2 * glasGrow.x;
+    const float glasH = m_height + 2 * glasGrow.y;
+    bool glasChanged = m_imgFocus->SetPosition(glasX, glasY);
+    glasChanged |= m_imgFocus->SetWidth(glasW);
+    glasChanged |= m_imgFocus->SetHeight(glasH);
+    glasChanged |= m_imgNoFocus->SetPosition(glasX, glasY);
+    glasChanged |= m_imgNoFocus->SetWidth(glasW);
+    glasChanged |= m_imgNoFocus->SetHeight(glasH);
+    if (glasChanged)
+      MarkDirtyRegion();
+  }
+@@end
+
+@@ replace xbmc/guilib/GUIButtonControl.cpp | grow Texturen zeichnen
+  m_imgFocus->Render();
+  m_imgNoFocus->Render();
+@@--
+  // Glas: grow - gewachsene Texturen ueber den innersten Ausschnitt (Grouplist, Liste) hinaus, aber nur um das
+  // Wachstum (Kodi macht jede Einstellungszeile so breit wie ihre Grouplist; ihr Rand wuerde abgeschnitten)
+  const CPoint glasGrow = GLAS_GROW::Peek(this);
+  CGraphicContext& glasGfx = CServiceBroker::GetWinSystem()->GetGfxContext();
+  const CRect glasClip = glasGfx.GetClipRegion();
+  bool glasLifted = false;
+  if ((glasGrow.x > 0.0f || glasGrow.y > 0.0f) &&
+      glasClip != CRect(0, 0, glasGfx.GetWidth(), glasGfx.GetHeight()))
+  {
+    glasGfx.RestoreClipRegion();
+    glasLifted = glasGfx.SetClipRegion(glasClip.x1 - glasGrow.x, glasClip.y1 - glasGrow.y,
+                                       glasClip.Width() + 2 * glasGrow.x, glasClip.Height() + 2 * glasGrow.y);
+    if (!glasLifted)
+      glasGfx.SetClipRegion(glasClip.x1, glasClip.y1, glasClip.Width(), glasClip.Height());
+  }
+  m_imgFocus->Render();
+  m_imgNoFocus->Render();
+  if (glasLifted)
+  {
+    glasGfx.RestoreClipRegion();
+    glasGfx.SetClipRegion(glasClip.x1, glasClip.y1, glasClip.Width(), glasClip.Height());
+  }
+@@end
+
+@@ replace xbmc/guilib/GUIButtonControl.cpp | grow Beschriftung
+  bool changed = m_label.SetMaxRect(m_posX, m_posY, renderTextWidth, m_height);
+  changed |= m_label.SetText(m_info.GetLabel(m_parentID));
+  changed |= m_label.SetScrolling(HasFocus());
+  changed |= m_label2.SetMaxRect(m_posX, m_posY, renderTextWidth, m_height);
+@@--
+  // Glas: grow - Beschriftung rueckt mit der gewachsenen Kante (bei width auto nicht: der Text bleibt mittig)
+  const CPoint glasGrow = m_minWidth ? CPoint() : GLAS_GROW::Peek(this);
+  bool changed = m_label.SetMaxRect(m_posX - glasGrow.x, m_posY - glasGrow.y, renderTextWidth + 2 * glasGrow.x,
+                                    m_height + 2 * glasGrow.y);
+  changed |= m_label.SetText(m_info.GetLabel(m_parentID));
+  changed |= m_label.SetScrolling(HasFocus());
+  changed |= m_label2.SetMaxRect(m_posX - glasGrow.x, m_posY - glasGrow.y, renderTextWidth + 2 * glasGrow.x,
+                                 m_height + 2 * glasGrow.y);
+@@end
+
+@@ replace xbmc/guilib/GUIButtonControl.cpp | grow Bereich
+  CRect buttonRect = CGUIControl::CalcRenderRegion();
+@@--
+  CRect buttonRect = CGUIControl::CalcRenderRegion();
+  // Glas: grow - die gewachsenen Texturen reichen ueber den Knopf hinaus
+  const CPoint glasGrow = GLAS_GROW::Peek(this);
+  buttonRect.x1 -= glasGrow.x;
+  buttonRect.y1 -= glasGrow.y;
+  buttonRect.x2 += glasGrow.x;
+  buttonRect.y2 += glasGrow.y;
+@@end
+
+Drehfeld und Regler: die Animationen haengen am aeusseren Control, gezeichnet wird der innere Knopf
+
+@@ after xbmc/guilib/GUISpinControlEx.cpp | grow include
+#include "GUISpinControlEx.h"
+@@--
+#include "GlasGrow.h" // Glas: Effekt grow
+@@end
+
+@@ before xbmc/guilib/GUISpinControlEx.cpp | grow Drehfeld
+  m_buttonControl.DoProcess(currentTime, dirtyregions);
+@@--
+  GLAS_GROW::Alias(&m_buttonControl, this); // Glas: grow der Zeile gilt fuer den Knopf
+@@end
+
+@@ after xbmc/guilib/GUISettingsSliderControl.cpp | grow include
+#include "GUISettingsSliderControl.h"
+@@--
+#include "GlasGrow.h" // Glas: Effekt grow
+@@end
+
+@@ before xbmc/guilib/GUISettingsSliderControl.cpp | grow Regler
+  m_buttonControl.DoProcess(currentTime, dirtyregions);
+@@--
+  GLAS_GROW::Alias(&m_buttonControl, this); // Glas: grow der Zeile gilt fuer den Knopf
+@@end
+
+=====================================================================================================================
+Listenhoehe nach den Eintraegen: <fititems>true</fititems> (src/xbmc/guilib/GlasFit.h)
+=====================================================================================================================
+
+@@ after xbmc/guilib/GUIControlFactory.cpp | fititems include
+#include "GUIControlFactory.h"
+@@--
+#include "GlasFit.h" // Glas: <fititems>
+@@end
+
+@@ before xbmc/guilib/GUIControlFactory.cpp | fititems Fabrik
+  // things that apply to all controls
+  if (control)
+@@--
+  // Glas: <fititems> an Listen - so hoch (waagrecht: so breit) wie die Eintraege, hoechstens height/width (GlasFit.h)
+  if (control && control->IsContainer())
+  {
+    bool glasFit = false;
+    if (XMLUtils::GetBoolean(pControlNode, "fititems", glasFit) && glasFit)
+      GLAS_FIT::Set(control, orientation == VERTICAL ? height : width);
+  }
+
+@@end
+
+@@ after xbmc/guilib/GUIBaseContainer.cpp | fititems include
+#include "GUIBaseContainer.h"
+@@--
+#include "GlasFit.h" // Glas: <fititems>
+@@end
+
+@@ after xbmc/guilib/GUIBaseContainer.cpp | fititems Process
+  if (m_bInvalidated)
+    UpdateLayout();
+
+  if (!m_layout || !m_focusedLayout) return;
+@@--
+
+  // Glas: <fititems> (GlasFit.h) - so hoch bzw. breit wie die sichtbaren Eintraege, hoechstens wie im Skin. Die
+  // Grouplist darueber liest die Groesse im selben Bild und rueckt nach
+  if (const float glasMax = GLAS_FIT::Max(this); glasMax > 0.0f)
+  {
+    const float glasSize =
+        m_items.empty()
+            ? 0.0f
+            : std::min(glasMax, static_cast<float>(m_items.size() - 1) * m_layout->Size(m_orientation) +
+                                    m_focusedLayout->Size(m_orientation));
+    if (m_orientation == VERTICAL ? m_height != glasSize : m_width != glasSize)
+    {
+      if (m_orientation == VERTICAL)
+        SetHeight(glasSize);
+      else
+        SetWidth(glasSize);
+      MarkDirtyRegion();
+    }
+  }
+@@end
+
+=====================================================================================================================
+Kleinigkeiten
+=====================================================================================================================
+
+Gekuerzter Text endet mit einem "…" (U+2026) statt drei Punkten, wenn die Schrift das Zeichen hat
+
+@@ replace xbmc/guilib/GUIFontTTF.cpp | Auslassung Breite
+      Character* ellipse = GetCharacter(L'.', 0);
+      if (ellipse)
+        m_ellipsesWidth = ellipse->m_advance;
+@@--
+      // Glas: ein "…" (U+2026) statt drei Punkten, wenn die Schrift es hat; m_ellipsesWidth bleibt ein Drittel
+      Character* ellipse = FT_Get_Char_Index(m_face, 0x2026) ? GetCharacter(0x2026, 0) : nullptr;
+      if (ellipse)
+        m_ellipsesWidth = ellipse->m_advance / 3.0f;
+      else if ((ellipse = GetCharacter(L'.', 0)))
+        m_ellipsesWidth = ellipse->m_advance;
+@@end
+
+@@ before xbmc/guilib/GUIFontTTF.cpp | Auslassung rechts
+          Character* period = GetCharacter(L'.', 0);
+          if (!period)
+            break;
+
+          for (int i = 0; i < 3; i++)
+@@--
+          // Glas: "…" als eine Glyphe, wenn die Schrift sie hat
+          if (FT_Get_Char_Index(m_face, 0x2026))
+          {
+            if (Character* glasEllipsis = GetCharacter(0x2026, 0))
+              RenderCharacter(context, startX + cursorX, startY, glasEllipsis, color, !scrolling,
+                              *tempVertices);
+            break;
+          }
+@@end
+
+@@ replace xbmc/guilib/GUIFontTTF.cpp | Auslassung links
+        // Add ellipsis only at the beginning of the text
+        Character* period = GetCharacter(L'.', 0);
+        if (!period)
+          break;
+
+        for (int i = 0; i < 3; i++)
+@@--
+        // Add ellipsis only at the beginning of the text
+        // Glas: "…" als eine Glyphe, wenn die Schrift sie hat
+        Character* glasEllipsis = FT_Get_Char_Index(m_face, 0x2026) ? GetCharacter(0x2026, 0) : nullptr;
+        Character* period = glasEllipsis ? glasEllipsis : GetCharacter(L'.', 0);
+        if (!period)
+          break;
+
+        for (int i = 0; i < (glasEllipsis ? 1 : 3); i++)
+@@end
+
+Textbox ohne Rollen (kein autoscroll, keine pagecontrol): die letzte ganz sichtbare Zeile endet mit "…", wenn noch Text
+folgt. Kodi schnitt dort ohne Zeichen ab. Dazu wird der restliche Text an die Zeile gehaengt und gekuerzt gezeichnet;
+passt er ganz hinein, steht er eben vollstaendig da.
+
+@@ replace xbmc/guilib/GUITextBox.cpp | Textbox Auslassung
+        m_font->DrawText(posX, posY, m_colors, m_label.shadowColor, lineString.m_text, align,
+                         m_width);
+        posY += m_itemHeight;
+        current++;
+@@--
+        // Glas: letzte ganz sichtbare Zeile einer Textbox ohne Rollen mit "…" beenden, wenn noch Text folgt
+        if (!m_pageControl && !m_autoScrollTime && current + 1 < static_cast<int>(m_lines.size()) &&
+            current - offset == static_cast<int>(m_itemsPerPage) - 1)
+        {
+          vecText glasText = lineString.m_text;
+          for (int glasLine = current + 1;
+               glasLine < static_cast<int>(m_lines.size()) && glasLine <= current + 8; glasLine++)
+          {
+            const vecText& glasNext = m_lines[glasLine].m_text;
+            if (glasNext.empty())
+              continue;
+            const character_t glasStyle = glasText.empty() ? 0 : (glasText.back() & 0xffff0000);
+            glasText.push_back(glasStyle | L' ');
+            glasText.insert(glasText.end(), glasNext.begin(), glasNext.end());
+          }
+          m_font->DrawText(posX, posY, m_colors, m_label.shadowColor, glasText,
+                           (align & ~XBFONT_JUSTIFIED) | XBFONT_TRUNCATED, m_width);
+          break;
+        }
+        m_font->DrawText(posX, posY, m_colors, m_label.shadowColor, lineString.m_text, align,
+                         m_width);
+        posY += m_itemHeight;
+        current++;
+@@end
+
+=====================================================================================================================
+Kontextmenue neben der Kachel (src/xbmc/guilib/GlasFocusItem.h)
+=====================================================================================================================
+
+Die Zelle des fokussierten Eintrags in Bildschirm-Pixeln, so wie sie gezeichnet wird: mit Grouplist-Rollen und
+Animationen der Eltern (Reihen der App TV), ohne die eigenen Animationen des Eintrags (Fokus-Zoom der Kachel)
+
+@@ after xbmc/guilib/GUIBaseContainer.cpp | Kontextmenue include
+#include "GUIBaseContainer.h"
+@@--
+#include "GlasFocusItem.h" // Glas: Kontextmenue neben der Kachel
+@@end
+
+@@ before xbmc/guilib/GUIBaseContainer.cpp | Kontextmenue Zelle merken
+    if (!item->GetFocusedLayout())
+    {
+      item->SetFocusedLayout(std::make_unique<CGUIListItemLayout>(*m_focusedLayout, this));
+    }
+@@--
+    // Glas: Zelle des fokussierten Eintrags in Bildschirm-Pixeln merken (GlasFocusItem.h); der Ursprung steht schon
+    // auf dem Eintrag, die Transformation enthaelt Rollen und Animationen der Eltern
+    {
+      CGraphicContext& glasGfx = CServiceBroker::GetWinSystem()->GetGfxContext();
+      const float glasW = m_focusedLayout->Size(HORIZONTAL);
+      const float glasH = m_focusedLayout->Size(VERTICAL);
+      GLAS_FOCUSITEM::Set(this, CRect(glasGfx.ScaleFinalXCoord(0, 0), glasGfx.ScaleFinalYCoord(0, 0),
+                                      glasGfx.ScaleFinalXCoord(glasW, glasH),
+                                      glasGfx.ScaleFinalYCoord(glasW, glasH)));
+    }
+@@end
+
+@@ after xbmc/dialogs/GUIDialogContextMenu.cpp | Kontextmenue include
+#include "GUIDialogContextMenu.h"
+@@--
+#include "guilib/GlasFocusItem.h" // Glas: Kontextmenue neben der Kachel
+#include "windowing/GraphicContext.h"
+#include "windowing/WinSystem.h"
+
+#include <algorithm>
+@@end
+
+@@ after xbmc/dialogs/GUIDialogContextMenu.cpp | Kontextmenue neben die Kachel
+    const CGUIControl *focusedControl = window->GetFocusedControl();
+    if (focusedControl)
+    {
+@@--
+      // Glas: neben den fokussierten Eintrag einer Liste statt mittig auf die ganze Liste (GlasFocusItem.h) - nur wenn
+      // das Menue es will: Control 9900 im Kontextmenue ist sichtbar (Bedingung im Skin). Rechts, solange die Zelle
+      // links der Bildmitte liegt, sonst links; oben buendig mit der Zelle, 20 px Rand oben, 40 unten (Platz fuer die
+      // Feinlage des Skins). Seite und Zellgroesse als Fenster-Eigenschaften glas.ctx.side/w/h
+      SetProperty("glas.ctx.side", "");
+      CGUIControl* glasMarker = GetControl(9900);
+      if (glasMarker)
+        glasMarker->UpdateVisibility(nullptr);
+      CRect glasCell;
+      if (glasMarker && glasMarker->IsVisible() && focusedControl->IsContainer() &&
+          GLAS_FOCUSITEM::Get(focusedControl, glasCell))
+      {
+        // Bildschirm-Pixel -> Koordinaten des Menues
+        CGraphicContext& glasGfx = CServiceBroker::GetWinSystem()->GetGfxContext();
+        const float glasW = static_cast<float>(m_coordsRes.iWidth);
+        const float glasH = static_cast<float>(m_coordsRes.iHeight);
+        const float glasSx = glasGfx.GetWidth() > 0 ? glasW / glasGfx.GetWidth() : 1.0f;
+        const float glasSy = glasGfx.GetHeight() > 0 ? glasH / glasGfx.GetHeight() : 1.0f;
+        glasCell = CRect(glasCell.x1 * glasSx, glasCell.y1 * glasSy, glasCell.x2 * glasSx, glasCell.y2 * glasSy);
+        // breite Zellen (Titelbild ueber die ganze Breite): kein "daneben", Kodis Mitte wie bisher
+        if (glasCell.Width() <= glasW * 0.5f)
+        {
+          const bool glasRight = (glasCell.x1 + glasCell.x2) * 0.5f <= glasW * 0.5f;
+          const float glasX = glasRight ? glasCell.x2 : glasCell.x1 - GetWidth();
+          const float glasY = std::max(20.0f, std::min(glasCell.y1, glasH - 40.0f - GetHeight()));
+          SetProperty("glas.ctx.side", glasRight ? "right" : "left");
+          SetProperty("glas.ctx.w", static_cast<int>(glasCell.Width() + 0.5f));
+          SetProperty("glas.ctx.h", static_cast<int>(glasCell.Height() + 0.5f));
+          SetPosition(m_coordX + glasX, m_coordY + glasY);
+          return;
+        }
+        // Glas: breite, flache Zeilen (Listen, Add-ons, Dateien): unter die Zeile, mittig auf ihr; passt es unten nicht,
+        // darueber. Vorher legte Kodi das Menue immer mittig auf die ganze Liste, egal welche Zeile (Nutzerbericht
+        // 06.11.2026). Hohe breite Zellen (Titelbild) bleiben in Kodis Mitte
+        if (glasCell.Height() <= glasH * 0.25f)
+        {
+          const float glasGap = 12.0f;
+          const float glasX = std::max(20.0f, std::min((glasCell.x1 + glasCell.x2 - GetWidth()) * 0.5f,
+                                                       glasW - 20.0f - GetWidth()));
+          const bool glasBelow = glasCell.y2 + glasGap + GetHeight() <= glasH - 40.0f;
+          const float glasY = glasBelow ? glasCell.y2 + glasGap
+                                        : std::max(20.0f, glasCell.y1 - glasGap - GetHeight());
+          SetProperty("glas.ctx.side", glasBelow ? "below" : "above");
+          SetProperty("glas.ctx.w", static_cast<int>(glasCell.Width() + 0.5f));
+          SetProperty("glas.ctx.h", static_cast<int>(glasCell.Height() + 0.5f));
+          SetPosition(m_coordX + glasX, m_coordY + glasY);
+          return;
+        }
+      }
+@@end
+
+=====================================================================================================================
+Ja/Nein-Dialog: Rolle fuer den Skin (zerstoerende Aktion rot, vorausgewaehlter Knopf)
+=====================================================================================================================
+
+@@ after xbmc/dialogs/GUIDialogYesNo.cpp | Ja/Nein include
+#include "GUIDialogYesNo.h"
+@@--
+#include "guilib/LocalizeStrings.h" // Glas: Rolle der Rueckfrage
+#include "utils/StringUtils.h"
+@@end
+
+@@ before xbmc/dialogs/GUIDialogYesNo.cpp | Ja/Nein Rolle
+  SET_CONTROL_FOCUS(m_defaultButtonId, 0);
+
+  CGUIDialogBoxBase::OnInitWindow();
+@@--
+  // Glas: Rolle der Rueckfrage als Fenster-Eigenschaften fuer den Skin (tvOS: zerstoerende Aktion rot und Fokus auf
+  // "Abbrechen", sonst Fokus auf der Hauptaktion). glas.yesno = true (Ja/Nein-Dialog dieses Builds), glas.destructive =
+  // true, wenn Titel, Text oder der Ja-Knopf "Loeschen" bzw. "Entfernen" (117/15015, in der Sprache der Oberflaeche)
+  // enthalten. Gesetzt vor CGUIWindow::OnInitWindow, also vor den onload-Aktionen des Skins
+  {
+    auto glasLower = [](std::string text) {
+      StringUtils::ToLower(text);
+      return text;
+    };
+    const std::string glasAll = glasLower(m_strHeading + "\n" + m_text + "\n" + m_strChoices[1]);
+    bool glasDestructive = false;
+    for (const int glasId : {117, 15015})
+    {
+      const std::string glasWord = glasLower(g_localizeStrings.Get(glasId));
+      if (!glasWord.empty() && glasAll.find(glasWord) != std::string::npos)
+        glasDestructive = true;
+    }
+    SetProperty("glas.yesno", "true");
+    SetProperty("glas.destructive", glasDestructive ? "true" : "");
+  }
+@@end
+
+=====================================================================================================================
+Fensterwechsel: Richtung als Window(Home).Property(glas.nav) = back / forward
+=====================================================================================================================
+
+Gesetzt, bevor Kodi das alte Fenster schliesst und das neue oeffnet; die Bedingungen von WindowOpen/WindowClose
+werden beim Start der Animation ausgewertet. Zurueck = PreviousWindow (Back, PreviousMenu), auch wenn es intern
+ActivateWindow aufruft; alles andere vorwaerts
+
+@@ before xbmc/guilib/GUIWindowManager.cpp | Richtung Hilfen
+void CGUIWindowManager::PreviousWindow()
+{
+@@--
+// Glas: Richtung des Fensterwechsels fuer den Skin (glas.nav an Home)
+namespace
+{
+bool g_glasBack = false;
+struct GlasBackScope
+{
+  GlasBackScope() { g_glasBack = true; }
+  ~GlasBackScope() { g_glasBack = false; }
+};
+void GlasSetNav(CGUIWindowManager& manager, bool back)
+{
+  if (CGUIWindow* home = manager.GetWindow(WINDOW_HOME))
+    home->SetProperty("glas.nav", back ? "back" : "forward");
+}
+} // namespace
+
+@@end
+
+@@ after xbmc/guilib/GUIWindowManager.cpp | Richtung zurueck
+  CGUIWindow *pCurrentWindow = GetWindow(currentWindow);
+  if (!pCurrentWindow)
+    return;     // no windows or window history yet
+@@--
+
+  GlasBackScope glasBack; // Glas: zurueck, auch ueber ActivateWindow weiter unten
+  GlasSetNav(*this, true);
+@@end
+
+@@ after xbmc/guilib/GUIWindowManager.cpp | Richtung vorwaerts
+  // debug
+  CLog::Log(LOGDEBUG, "Activating window ID: {}", iWindowID);
+@@--
+  GlasSetNav(*this, g_glasBack); // Glas: vorwaerts, ausser aus PreviousWindow
+@@end
+
+=====================================================================================================================
+Ueberblenden von Bildern mit Kurve: <fadetime tween="sine" easing="inout">400</fadetime> (src/xbmc/guilib/GlasFade.h)
+=====================================================================================================================
+
+@@ after xbmc/guilib/GUIControlFactory.cpp | Ueberblenden include
+#include "GUIControlFactory.h"
+@@--
+#include "GlasFade.h" // Glas: Kurve von fadetime
+@@end
+
+@@ after xbmc/guilib/GUIControlFactory.cpp | Ueberblenden Fabrik
+      icontrol->SetCrossFade(fadeTime);
+@@--
+      // Glas: Kurve der Ueberblendung (tween/easing oder spring am Tag fadetime, GlasFade.h)
+      if (const TiXmlElement* glasFade = pControlNode->FirstChildElement("fadetime"))
+      {
+        if (glasFade->Attribute("tween") || glasFade->Attribute("spring"))
+          GLAS_FADE::Set(control, CAnimEffect::GetTweener(glasFade));
+      }
+@@end
+
+@@ after xbmc/guilib/GUIImage.cpp | Ueberblenden include
+#include "GUIImage.h"
+@@--
+#include "GlasFade.h" // Glas: Kurve von fadetime
+@@end
+
+@@ after xbmc/guilib/GUIImage.cpp | Ueberblenden Kurve
+unsigned char CGUIImage::GetFadeLevel(unsigned int time) const
+{
+  float amount = (float)time / m_crossFadeTime;
+@@--
+  // Glas: Kurve der Ueberblendung (GlasFade.h), sonst linear wie bei Kodi
+  if (const auto glasTween = GLAS_FADE::Get(this))
+    amount = glasTween->Tween(std::min(1.0f, std::max(0.0f, amount)), 0.0f, 1.0f, 1.0f);
+@@end
+
+=====================================================================================================================
+Vorschaubild beim Spulen: Bildadresse glasseek://<Datei>/<Zeit> (wie Kodis chapter:// der Kapitelbilder)
+=====================================================================================================================
+
+Zeit wie Player.SeekTime (h:mm:ss, mm:ss) oder Sekunden. Kodi zieht das Bild in einem Hintergrund-Auftrag aus dem Film
+(eigener Demuxer, Software-Decoder, wie die Kapitelbilder) und legt es wie jedes Bild im Bild-Cache ab
+
+@@ after xbmc/TextureCacheJob.cpp | Spulvorschau Adresse
+  if (StringUtils::StartsWith(url, "chapter://"))
+  {
+    // workaround for chapter thumbnail paths, which don't yet conform to the image:// path.
+    additional_info = "videochapter";
+  }
+@@--
+  // Glas: Vorschaubild beim Spulen (VideoChapterImageFileLoader.cpp)
+  if (StringUtils::StartsWith(url, "glasseek://"))
+    additional_info = "glasseek";
+@@end
+
+@@ after xbmc/video/VideoChapterImageFileLoader.cpp | Spulvorschau include
+#include "utils/log.h"
+@@--
+#include "utils/StringUtils.h" // Glas: Spulvorschau
+#include "utils/URIUtils.h" // Glas: Spulvorschau bei Blu-ray-ISOs
+#include "application/Application.h" // Glas: gespielte Titelliste (Spulvorschau bei Blu-ray-ISOs)
+
+// Glas: Spulvorschau aus dem offen gehaltenen Film (DVDFileInfo.cpp)
+std::unique_ptr<CTexture> GlasSeekThumb(const std::string& path, int seconds);
+
+#include <algorithm>
+#include <cstdlib>
+@@end
+
+@@ replace xbmc/video/VideoChapterImageFileLoader.cpp | Spulvorschau CanLoad
+  return specialType == "videochapter";
+@@--
+  return specialType == "videochapter" || specialType == "glasseek"; // Glas: Spulvorschau
+@@end
+
+@@ after xbmc/video/VideoChapterImageFileLoader.cpp | Spulvorschau Load
+    unsigned int,
+    unsigned int) const
+{
+@@--
+  // Glas: Vorschaubild beim Spulen - glasseek://<Datei>/<Zeit>; die Zeit geht als negative Kapitelnummer (Sekunden) an
+  // ExtractThumbToTexture
+  if (specialType == "glasseek")
+  {
+    const size_t glasSlash = goofyChapterPath.rfind('/');
+    if (glasSlash == std::string::npos || glasSlash <= 11)
+      return {};
+    int glasSeconds = 0;
+    for (const std::string& glasPart : StringUtils::Split(goofyChapterPath.substr(glasSlash + 1), ":"))
+      glasSeconds = glasSeconds * 60 + std::atoi(glasPart.c_str());
+    std::string glasPath = goofyChapterPath.substr(11, glasSlash - 11);
+    // Blu-ray-ISO: der Skin kennt nur die ISO (Player.FilenameAndPath); laeuft sie gerade, die gespielte Titelliste
+    // (bluray://.../BDMV/PLAYLIST/xxxxx.mpls) nehmen - aus der ISO selbst zieht Kodi kein Bild (CanExtract)
+    // nur bei Abbildern/Blu-ray-Ordnern nachsehen (der gespielte Eintrag wird ohne Sperre gelesen)
+    if (const auto glasPlaying = (URIUtils::IsDiscImage(glasPath) || URIUtils::HasExtension(glasPath, ".bdmv"))
+                                     ? g_application.CurrentFileItemPtr()
+                                     : nullptr)
+    {
+      if (glasPlaying->GetPath() == glasPath && URIUtils::IsBluray(glasPlaying->GetDynPath()))
+        glasPath = glasPlaying->GetDynPath();
+    }
+    // offen gehaltener Film statt Neuaufbau je Bild (DVDFileInfo.cpp, GlasSeekThumb)
+    return GlasSeekThumb(glasPath, std::max(1, glasSeconds));
+  }
+
+@@end
+
+@@ replace xbmc/cores/VideoPlayer/DVDFileInfo.cpp | Spulvorschau Zeit
+      int64_t nSeekTo =
+          seekToChapter ? demuxer->GetChapterPos(chapterNumber) * 1000 : nTotalLen / 3;
+@@--
+      // Glas: negative Kapitelnummer = Zeit in Sekunden (Vorschaubild beim Spulen, glasseek://)
+      int64_t nSeekTo = chapterNumber < 0 ? static_cast<int64_t>(-chapterNumber) * 1000
+                        : seekToChapter   ? demuxer->GetChapterPos(chapterNumber) * 1000
+                                          : nTotalLen / 3;
+@@end
+
+=====================================================================================================================
+Kapitelbilder und Spulvorschau bei Blu-rays: Bilder aus einer festen Titelliste erlauben
+=====================================================================================================================
+
+Kodi zieht aus Discs grundsaetzlich keine Bilder (CanExtract: "mostly can't extract from discs"), auch nicht aus der
+Titelliste, die gerade laeuft (chapter://bluray://udf...iso/BDMV/PLAYLIST/00800.mpls/3). Mit fester Titelliste ist
+klar, welcher Film gemeint ist: dann wie bei einer Datei. ISO, Ordner und DVD bleiben ausgeschlossen (03.11./05.11.2026:
+am PC fehlten die Kapitelbilder bei Blu-ray-ISOs, auch im offiziellen Kodi 21.3)
+
+@@ replace xbmc/cores/VideoPlayer/DVDFileInfo.cpp | Blu-ray-Titelliste
+  // mostly can't extract from discs and files from discs.
+  if (URIUtils::IsBluray(fileItem.GetPath()) || fileItem.IsBDFile() || fileItem.IsDVD() ||
+      fileItem.IsDiscImage() || fileItem.IsDVDFile(false, true))
+    return false;
+@@--
+  // mostly can't extract from discs and files from discs.
+  // Glas: Blu-ray mit fester Titelliste (bluray://.../BDMV/PLAYLIST/xxxxx.mpls) wie eine Datei
+  const bool glasBlurayPlaylist =
+      URIUtils::IsBluray(fileItem.GetPath()) && URIUtils::HasExtension(fileItem.GetPath(), ".mpls");
+  if ((URIUtils::IsBluray(fileItem.GetPath()) && !glasBlurayPlaylist) || fileItem.IsBDFile() ||
+      fileItem.IsDVD() || fileItem.IsDiscImage() || fileItem.IsDVDFile(false, true))
+    return false;
+@@end
+
+Kodis Blu-ray-Eingang oeffnet nur mit einem Player (Open: m_player == nullptr -> false); beim Bildziehen gibt es keinen.
+Ein Platzhalter mit IVideoPlayer (zwei Methoden) reicht: ohne Menue ruft der Eingang ihn nur fuer Ereignisse auf.
+
+@@ before xbmc/cores/VideoPlayer/DVDFileInfo.cpp | Blu-ray-Platzhalter
+std::unique_ptr<CTexture> CDVDFileInfo::ExtractThumbToTexture(const CFileItem& fileItem,
+@@--
+#include "IVideoPlayer.h" // Glas: Platzhalter-Player
+
+namespace
+{
+// Glas: Platzhalter-Player fuer den Blu-ray-Eingang beim Bildziehen (Kapitelbilder, Spulvorschau)
+class CGlasNoPlayer : public IVideoPlayer
+{
+public:
+  int OnDiscNavResult(void*, int) override { return 0; }
+  void GetVideoResolution(unsigned int& width, unsigned int& height) override
+  {
+    width = 1920;
+    height = 1080;
+  }
+};
+CGlasNoPlayer g_glasNoPlayer;
+} // namespace
+
+@@end
+
+=====================================================================================================================
+Spulvorschau beschleunigt: Film fuer die Vorschau offen halten
+=====================================================================================================================
+
+Kodis Bildziehen baut fuer jedes Bild alles neu auf (Datei ueber das Netz oeffnen, Demuxer, Software-Decoder, springen,
+ein Bild). Auf der Vero dauerte ein Vorschaubild so ~1,1 s (05.11.2026), Kodi sprang vorher (seekdelay 0) - die Vorschau
+war nie zu sehen. GlasSeekThumb haelt Datei, Demuxer und Decoder des zuletzt gespulten Films offen und springt nur noch
+(Decoder zuruecksetzen, bis zum ersten Bild dekodieren). Eine Anfrage, hinter der schon eine neuere wartet, entfaellt
+(beim schnellen Weiterspulen zaehlt nur das letzte Ziel). Geschlossen wird beim Stopp der Wiedergabe (Ankuendigung
+Player/OnStop), bei einem anderen Film und nach einem Fehler; Kodis eigener Weg (Kapitelbilder) bleibt unberuehrt.
+Vor dem Abbau der Netzfreigaben (Ruhezustand) schliesst CApplication::CloseNetworkShares sofort, da Kodis Stopp sich
+erst danach ankuendigt (sonst Zugriff auf eine abgebaute NFS-Verbindung). Braucht ein Bild ueber 1,5 s, gibt es fuer
+diesen Film bis zum Stopp keine mehr.
+Gemessen 05.11.2026: Vero 1080p 80-360 ms je Bild (vorher ~1,1 s), PC 55-140 ms, Blu-ray-ISO am PC 450-950 ms.
+
+Dekodiert wird nur das Schluesselbild am Sprungziel, direkt mit libavcodec statt Kodis Decoder (05.11.2026, abends):
+Kodis Software-Decoder gab das Bild erst heraus, wenn der Umsortier-Puffer voll war (HEVC: 3-5 Bilder, auf der Vero in
+4K je ~1 s, zusammen 5-6 s). Jetzt: ein Paket, Decoder leeren (Drain) -> das Schluesselbild kommt sofort; ohne
+Deblocking (skip_loop_filter), Slice-Threads, 10 Bit direkt beim Verkleinern nach BGRA. Der Decoder lebt nur fuer ein
+Bild (wenig Speicher, auch bei 4K); Datei und Demuxer bleiben offen. Klappt das nicht (Blu-ray: nach dem Sprung kommt
+nicht immer zuerst ein Schluesselbild), sucht ein zweiter Durchgang das naechste I-Bild und verwirft alles davor ungelesen
+(skip_frame NONINTRA, SHOW_ALL, angenommen nur Bilder vom Typ I: Blu-rays markieren ihre I-Bilder nicht als
+Schluesselbilder, NONKEY fand nichts; ohne Filter kamen graue Flaechen bzw. voll dekodiert bis dorthin 4,4 s). Der Skin
+fragt waehrend eines Spulschritts im Sekundentakt nach (Player.SeekTime laeuft mit); meist ist es dasselbe
+Schluesselbild: beginnt das erste Paket am selben Zeitstempel wie beim letzten Bild, gibt es eine Kopie ohne zu
+dekodieren. War das letzte Bild langsam (ueber 0,5 s), bekommen Anfragen bis 3 s daneben es ebenfalls (sonst waere
+jedes Bild beim Fertigwerden ueberholt und die Anzeige bliebe stehen). Gemessen 05.11.2026 (Vero): 4K-HEVC Dolby Vision 165-1170 ms je Bild (vorher 5-6 s), Blu-ray-ISO
+109-192 ms (vorher ~5 s; das erste Bild 2,4 s mit dem Oeffnen der Titelliste), PC 1080p 24-81 ms.
+
+@@ before xbmc/cores/VideoPlayer/DVDFileInfo.cpp | Spulvorschau offen halten
+std::unique_ptr<CTexture> CDVDFileInfo::ExtractThumbToTexture(const CFileItem& fileItem,
+@@--
+#include "URL.h" // Glas: Spulvorschau offen halten
+#include "application/ApplicationComponents.h"
+#include "application/ApplicationPlayer.h"
+#include "interfaces/AnnouncementManager.h"
+#include "utils/Variant.h"
+
+#include "cores/VideoPlayer/Interface/TimingConstants.h" // Glas: DVD_NOPTS_VALUE
+
+#include <atomic>
+#include <chrono>
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace GLAS_SEEKTHUMB
+{
+//! Geoeffneter Film fuer die Spulvorschau
+struct Open
+{
+  std::string path;
+  std::shared_ptr<CDVDInputStream> input;
+  std::unique_ptr<CDVDDemux> demuxer;
+  CDVDStreamInfo hint;
+  const AVCodec* decoder = nullptr;
+  int videoStream = -1;
+  int64_t demuxerId = -1;
+  //! letztes Bild: Zeitstempel seines ersten Pakets und die Pixel (gleiches Schluesselbild -> Kopie)
+  double cacheKey = DVD_NOPTS_VALUE;
+  unsigned int cacheW = 0, cacheH = 0, cachePitch = 0;
+  int cacheOrientation = 0;
+  std::vector<uint8_t> cachePixels;
+  //! Zeit und Dauer des zuletzt gerechneten Bildes (langsam: Anfragen kurz danach bekommen es weiter)
+  int lastSeconds = -1000;
+  bool lastSlow = false;
+
+  void Close()
+  {
+    decoder = nullptr;
+    cacheKey = DVD_NOPTS_VALUE;
+    cachePixels.clear();
+    lastSeconds = -1000;
+    lastSlow = false;
+    demuxer.reset();
+    input.reset();
+    path.clear();
+    videoStream = -1;
+    demuxerId = -1;
+  }
+};
+
+struct State;
+State& Get();
+
+//! Stopp der Wiedergabe: Film schliessen (Speicher des Decoders, Netzzugriff)
+class CStopListener : public ANNOUNCEMENT::IAnnouncer
+{
+public:
+  void Announce(ANNOUNCEMENT::AnnouncementFlag flag,
+                const std::string&,
+                const std::string& message,
+                const CVariant&) override;
+};
+
+struct State
+{
+  std::mutex lock;
+  Open open;
+  std::atomic<unsigned int> latest{0};
+  //! zaehlt jeden Stopp der Wiedergabe; ein Film, der vor einem Stopp geoeffnet wurde, wird geschlossen
+  std::atomic<unsigned int> stops{0};
+  unsigned int openStops = 0;
+  //! Film, bei dem ein Bild zu lange brauchte (Vero: 4K-HEVC in Software 5-6 s), bis zum naechsten Stopp
+  std::string slowPath;
+  unsigned int slowStops = 0;
+  CStopListener* listener = nullptr;
+};
+
+//! nie zerstoert: Ankuendigungen koennen bis zum Ende von Kodi kommen
+State& Get()
+{
+  static State* state = new State();
+  return *state;
+}
+
+void CStopListener::Announce(ANNOUNCEMENT::AnnouncementFlag flag,
+                             const std::string&,
+                             const std::string& message,
+                             const CVariant&)
+{
+  if (flag == ANNOUNCEMENT::Player && message == "OnStop")
+  {
+    // nie auf ein laufendes Bild warten (der Ankuendigungs-Thread haelt dabei Kodis Ankuendigungs-Sperre):
+    // laeuft gerade eins, schliesst die Anfrage selbst, sobald sie den gezaehlten Stopp sieht
+    State& s = Get();
+    ++s.stops;
+    std::unique_lock<std::mutex> guard(s.lock, std::try_to_lock);
+    if (guard.owns_lock())
+      s.open.Close();
+  }
+}
+
+//! Wiedergabe laeuft (sonst nichts oeffnen: ein spaeter Auftrag nach dem Stopp hielte die Datei sonst offen)
+bool PlayerActive()
+{
+  const auto player = CServiceBroker::GetAppComponents().GetComponent<CApplicationPlayer>();
+  return player && player->IsPlaying();
+}
+
+bool OpenFile(Open& o, const std::string& path)
+{
+  o.Close();
+  CFileItem item(path, false);
+  item.SetMimeTypeForInternetFile();
+  o.input = CDVDFactoryInputStream::CreateInputStream(
+      URIUtils::IsBluray(path) ? &g_glasNoPlayer : nullptr, item);
+  if (!o.input || !o.input->Open())
+  {
+    o.Close();
+    return false;
+  }
+  o.demuxer.reset(CDVDFactoryDemuxer::CreateDemuxer(o.input, true));
+  if (!o.demuxer)
+  {
+    o.Close();
+    return false;
+  }
+  for (CDemuxStream* stream : o.demuxer->GetStreams())
+  {
+    if (!stream)
+      continue;
+    if (stream->type == STREAM_VIDEO && !(stream->flags & AV_DISPOSITION_ATTACHED_PIC))
+    {
+      o.videoStream = stream->uniqueId;
+      o.demuxerId = stream->demuxerId;
+    }
+    else
+      o.demuxer->EnableStream(stream->demuxerId, stream->uniqueId, false);
+  }
+  CDemuxStream* video = o.videoStream != -1 ? o.demuxer->GetStream(o.demuxerId, o.videoStream) : nullptr;
+  if (!video)
+  {
+    o.Close();
+    return false;
+  }
+  o.hint.Assign(*video, true);
+  o.decoder = avcodec_find_decoder(o.hint.codec);
+  if (!o.decoder)
+  {
+    o.Close();
+    return false;
+  }
+  o.path = path;
+  return true;
+}
+
+//! Decoder fuer ein Bild: ohne Deblocking, Slice-Threads (keine Verzoegerung wie Frame-Threads)
+//! intra: nur I-Bilder dekodieren (alles andere ungelesen verwerfen) und auch ohne Wiederherstellungspunkt ausgeben -
+//! Blu-rays markieren ihre I-Bilder nicht als Schluesselbilder (NONKEY verwarf alles); ein I-Bild ist fuer sich ganz
+AVCodecContext* NewContext(const Open& o, bool intra = false)
+{
+  AVCodecContext* ctx = avcodec_alloc_context3(o.decoder);
+  if (!ctx)
+    return nullptr;
+  ctx->codec_tag = o.hint.codec_tag;
+  ctx->coded_width = o.hint.width;
+  ctx->coded_height = o.hint.height;
+  ctx->bits_per_coded_sample = o.hint.bitsperpixel;
+  ctx->bits_per_raw_sample = o.hint.bitdepth;
+  if (o.hint.extradata)
+  {
+    ctx->extradata = static_cast<uint8_t*>(av_mallocz(o.hint.extradata.GetSize() + AV_INPUT_BUFFER_PADDING_SIZE));
+    if (ctx->extradata)
+    {
+      ctx->extradata_size = static_cast<int>(o.hint.extradata.GetSize());
+      memcpy(ctx->extradata, o.hint.extradata.GetData(), o.hint.extradata.GetSize());
+    }
+  }
+  ctx->skip_loop_filter = AVDISCARD_ALL;
+  ctx->flags2 |= AV_CODEC_FLAG2_FAST;
+  if (intra)
+  {
+    ctx->skip_frame = AVDISCARD_NONINTRA;
+    ctx->flags2 |= AV_CODEC_FLAG2_SHOW_ALL;
+    // sofort ausgeben: sonst wartete das I-Bild im Umsortier-Puffer bis zum Leeren (bis zu 90 Pakete gelesen)
+    ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
+  }
+  ctx->thread_type = FF_THREAD_SLICE;
+  ctx->thread_count = 0; // so viele wie Kerne
+  if (avcodec_open2(ctx, o.decoder, nullptr) < 0)
+    avcodec_free_context(&ctx);
+  return ctx;
+}
+
+//! Video-Pakete ab der aktuellen Stelle an den Decoder, bis ein Bild kommt; drain: danach leeren (das zuletzt
+//! gegebene Bild kommt sofort, ohne auf die Umsortierung zu warten)
+//! intraOnly: nur I-Bilder annehmen (Durchgang 2, SHOW_ALL gaebe sonst unvollstaendige Bilder heraus)
+bool Feed(Open& o, AVCodecContext* ctx, AVFrame* frame, int maxPackets, bool drain, int& fed,
+          DemuxPacket* first = nullptr, bool intraOnly = false)
+{
+  const auto receive = [&]() {
+    while (avcodec_receive_frame(ctx, frame) == 0)
+    {
+      if (!intraOnly || frame->pict_type == AV_PICTURE_TYPE_I)
+        return true;
+      av_frame_unref(frame);
+    }
+    return false;
+  };
+  AVPacket* pkt = av_packet_alloc();
+  if (!pkt)
+  {
+    if (first)
+      CDVDDemuxUtils::FreeDemuxPacket(first);
+    return false;
+  }
+  bool got = false;
+  int reads = o.demuxer->GetNrOfStreams() * 160;
+  int sent = 0;
+  while (!got && sent < maxPackets && reads-- > 0)
+  {
+    DemuxPacket* packet = first ? first : o.demuxer->Read();
+    first = nullptr;
+    if (!packet)
+      break;
+    if (packet->iStreamId != o.videoStream || !packet->pData || packet->iSize <= 0)
+    {
+      CDVDDemuxUtils::FreeDemuxPacket(packet);
+      continue;
+    }
+    pkt->data = packet->pData;
+    pkt->size = packet->iSize;
+    const int ret = avcodec_send_packet(ctx, pkt); // kopiert die Daten (Paket ohne eigenen Puffer)
+    CDVDDemuxUtils::FreeDemuxPacket(packet);
+    ++sent;
+    ++fed;
+    if (ret < 0 && ret != AVERROR(EAGAIN))
+      continue;
+    got = receive();
+  }
+  if (!got && drain && sent > 0)
+  {
+    avcodec_send_packet(ctx, nullptr);
+    got = receive();
+  }
+  av_packet_free(&pkt);
+  return got;
+}
+
+//! Kopie des zuletzt gerechneten Bildes
+std::unique_ptr<CTexture> FromCache(const Open& o)
+{
+  std::unique_ptr<CTexture> copy = CTexture::CreateTexture(o.cacheW, o.cacheH);
+  if (!copy || copy->GetPitch() != o.cachePitch || o.cachePixels.size() != o.cachePitch * o.cacheH)
+    return {};
+  copy->SetAlpha(false);
+  copy->SetOrientation(o.cacheOrientation);
+  memcpy(copy->GetPixels(), o.cachePixels.data(), o.cachePixels.size());
+  return copy;
+}
+
+//! erstes Video-Paket ab der aktuellen Stelle (andere Spuren verwerfen)
+DemuxPacket* FirstVideoPacket(Open& o)
+{
+  int reads = o.demuxer->GetNrOfStreams() * 160;
+  while (reads-- > 0)
+  {
+    DemuxPacket* packet = o.demuxer->Read();
+    if (!packet)
+      return nullptr;
+    if (packet->iStreamId == o.videoStream && packet->pData && packet->iSize > 0)
+      return packet;
+    CDVDDemuxUtils::FreeDemuxPacket(packet);
+  }
+  return nullptr;
+}
+
+//! springen und das Schluesselbild dort als Textur (Groesse wie ExtractThumbToTexture)
+std::unique_ptr<CTexture> Decode(Open& o, int64_t ms, int& fed, bool& cached)
+{
+  fed = 0;
+  cached = false;
+  if (!o.demuxer->SeekTime(static_cast<double>(ms), true))
+    return {};
+  DemuxPacket* first = FirstVideoPacket(o);
+  if (!first)
+    return {};
+  // gleiches Schluesselbild wie beim letzten Bild: Kopie, nicht neu dekodieren
+  const double key = first->dts != DVD_NOPTS_VALUE ? first->dts : first->pts;
+  if (key != DVD_NOPTS_VALUE && key == o.cacheKey && !o.cachePixels.empty())
+  {
+    CDVDDemuxUtils::FreeDemuxPacket(first);
+    cached = true;
+    return FromCache(o);
+  }
+  AVCodecContext* ctx = NewContext(o);
+  AVFrame* frame = av_frame_alloc();
+  if (!ctx || !frame)
+  {
+    CDVDDemuxUtils::FreeDemuxPacket(first);
+    av_frame_free(&frame);
+    avcodec_free_context(&ctx);
+    return {};
+  }
+  // 1. das Paket am Sprungziel (Schluesselbild) und sofort leeren
+  bool got = Feed(o, ctx, frame, 1, true, fed, first);
+  if (!got)
+  {
+    // 2. neuer Decoder (nach dem Leeren nimmt er nichts mehr an), von vorn bis zum naechsten I-Bild; alles davor
+    //    verwirft er ungelesen (Blu-ray: bis zu ~30 Bilder, voll dekodiert auf der Vero 4,4 s)
+    avcodec_free_context(&ctx);
+    ctx = NewContext(o, true);
+    if (ctx && o.demuxer->SeekTime(static_cast<double>(ms), true))
+      got = Feed(o, ctx, frame, 90, true, fed, nullptr, true);
+  }
+  std::unique_ptr<CTexture> result;
+  if (got && frame->width > 0 && frame->height > 0)
+  {
+    double aspect = static_cast<double>(frame->width) / frame->height;
+    if (frame->sample_aspect_ratio.num > 0 && frame->sample_aspect_ratio.den > 0)
+      aspect *= av_q2d(frame->sample_aspect_ratio);
+    if (o.hint.forced_aspect && o.hint.aspect != 0)
+      aspect = o.hint.aspect;
+    const unsigned int displayWidth = static_cast<unsigned int>(frame->height * aspect + 0.5);
+    const unsigned int width = std::min(
+        displayWidth, CServiceBroker::GetSettingsComponent()->GetAdvancedSettings()->m_imageRes);
+    const unsigned int height = static_cast<unsigned int>(width / aspect);
+    struct SwsContext* sws =
+        width && height ? sws_getContext(frame->width, frame->height, static_cast<AVPixelFormat>(frame->format),
+                                         width, height, AV_PIX_FMT_BGRA, SWS_FAST_BILINEAR, nullptr, nullptr,
+                                         nullptr)
+                        : nullptr;
+    if (sws)
+    {
+      result = CTexture::CreateTexture(width, height);
+      result->SetAlpha(false);
+      uint8_t* dst[] = {result->GetPixels(), nullptr, nullptr, nullptr};
+      int dstStride[] = {static_cast<int>(result->GetPitch()), 0, 0, 0};
+      result->SetOrientation(DegreeToOrientation(o.hint.orientation));
+      sws_scale(sws, frame->data, frame->linesize, 0, frame->height, dst, dstStride);
+      sws_freeContext(sws);
+      // fuer weitere Anfragen am selben Schluesselbild merken
+      o.cacheKey = key;
+      o.cacheW = width;
+      o.cacheH = height;
+      o.cachePitch = result->GetPitch();
+      o.cacheOrientation = DegreeToOrientation(o.hint.orientation);
+      o.cachePixels.assign(result->GetPixels(), result->GetPixels() + o.cachePitch * height);
+    }
+  }
+  av_frame_free(&frame);
+  avcodec_free_context(&ctx);
+  return result;
+}
+} // namespace GLAS_SEEKTHUMB
+
+//! Spulvorschau (VideoChapterImageFileLoader.cpp, glasseek://): Bild an der Zeit aus dem offen gehaltenen Film
+std::unique_ptr<CTexture> GlasSeekThumb(const std::string& path, int seconds)
+{
+  using namespace GLAS_SEEKTHUMB;
+  State& s = Get();
+  const unsigned int ticket = ++s.latest;
+  std::unique_lock<std::mutex> guard(s.lock);
+  if (ticket != s.latest)
+  {
+    CLog::Log(LOGDEBUG, "Glas-Spulvorschau: Bild bei {} s entfaellt (neuere Anfrage)", seconds);
+    return {}; // eine neuere Anfrage wartet schon: diese entfaellt
+  }
+  if (!s.listener)
+  {
+    if (const auto announcements = CServiceBroker::GetAnnouncementManager())
+    {
+      s.listener = new CStopListener();
+      announcements->AddAnnouncer(s.listener);
+    }
+  }
+  const unsigned int stopsNow = s.stops;
+  if (!s.open.path.empty() && s.openStops != stopsNow)
+    s.open.Close(); // vor einem Stopp geoeffnet
+  if (!PlayerActive())
+  {
+    s.open.Close();
+    return {};
+  }
+  if (s.slowPath == path && s.slowStops == stopsNow)
+    return {}; // zu langsam fuer eine Vorschau: nicht nebenher weiter dekodieren
+  CFileItem item(path, false);
+  if (!CDVDFileInfo::CanExtract(item))
+    return {};
+  const auto start = std::chrono::steady_clock::now();
+  if (s.open.path != path)
+  {
+    if (!OpenFile(s.open, path))
+    {
+      CLog::Log(LOGWARNING, "Glas-Spulvorschau: {} nicht zu oeffnen", CURL::GetRedacted(path));
+      return {};
+    }
+    s.openStops = stopsNow;
+    CLog::Log(LOGINFO, "Glas-Spulvorschau: Film geoeffnet ({} ms)",
+              std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                  .count());
+  }
+  // Waehrend man spult, laeuft der Film weiter: der Skin fragt jede Sekunde ein neues Ziel an. Braucht ein Bild laenger
+  // (Blu-ray ~1,1 s, 4K bis ~1 s), waere jedes beim Fertigwerden schon ueberholt und die Anzeige bliebe stehen; dann
+  // gilt das letzte Bild fuer Anfragen bis 3 s daneben weiter, echte Spruenge (ab 10 s) rechnen sofort neu
+  if (s.open.lastSlow && !s.open.cachePixels.empty() && std::abs(seconds - s.open.lastSeconds) < 3)
+  {
+    CLog::Log(LOGDEBUG, "Glas-Spulvorschau: Bild bei {} s wie bei {} s (letztes Bild langsam)", seconds,
+              s.open.lastSeconds);
+    return FromCache(s.open);
+  }
+  const auto decodeStart = std::chrono::steady_clock::now();
+  int fed = 0;
+  bool cached = false;
+  auto result = Decode(s.open, static_cast<int64_t>(seconds) * 1000, fed, cached);
+  if (result && !cached)
+  {
+    s.open.lastSeconds = seconds;
+    s.open.lastSlow = std::chrono::steady_clock::now() - decodeStart > std::chrono::milliseconds(500);
+  }
+  const auto now = std::chrono::steady_clock::now();
+  const auto took = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+  CLog::Log(took > 400 ? LOGINFO : LOGDEBUG, "Glas-Spulvorschau: Bild bei {} s {} ({} ms, {}, {}x{})", seconds,
+            result ? "fertig" : "fehlt", took, cached ? std::string("gleiches Schluesselbild") :
+            std::to_string(fed) + " Pakete", s.open.hint.width, s.open.hint.height);
+  if (now - decodeStart > std::chrono::milliseconds(1500))
+  {
+    CLog::Log(LOGINFO, "Glas-Spulvorschau: zu langsam fuer diesen Film, aus bis zum Stopp");
+    s.slowPath = path;
+    s.slowStops = stopsNow;
+  }
+  // Datei und Demuxer bleiben offen (der Decoder lebt nur fuer ein Bild, auch bei 4K wenig Speicher)
+  if (!result || s.openStops != s.stops)
+    s.open.Close(); // beim naechsten Mal frisch oeffnen
+  return result;
+}
+
+//! CApplication::CloseNetworkShares (Ruhezustand): vor dem Abbau der Netzfreigaben schliessen, sonst griffe der offene
+//! Film spaeter auf eine abgebaute NFS-Verbindung zu. Kodis eigener Stopp kuendigt sich erst danach an.
+void GlasSeekClose()
+{
+  using namespace GLAS_SEEKTHUMB;
+  State& s = Get();
+  ++s.stops;
+  std::unique_lock<std::mutex> guard(s.lock);
+  s.open.Close();
+}
+
+@@end
+
+@@ before xbmc/application/Application.cpp | Spulvorschau schliessen Deklaration
+void CApplication::CloseNetworkShares()
+@@--
+// Glas: offen gehaltenen Film der Spulvorschau schliessen (DVDFileInfo.cpp)
+void GlasSeekClose();
+
+@@end
+
+@@ after xbmc/application/Application.cpp | Spulvorschau schliessen vor den Netzfreigaben
+  CLog::Log(LOGDEBUG,"CApplication::CloseNetworkShares: Closing all network shares");
+@@--
+
+  GlasSeekClose(); // Glas: Spulvorschau, bevor die Verbindungen abgebaut werden
+@@end
+
+@@ replace xbmc/cores/VideoPlayer/DVDFileInfo.cpp | Blu-ray-Platzhalter Eingang
+  CFileItem item(fileItem);
+  item.SetMimeTypeForInternetFile();
+  auto pInputStream = CDVDFactoryInputStream::CreateInputStream(NULL, item);
+@@--
+  CFileItem item(fileItem);
+  item.SetMimeTypeForInternetFile();
+  // Glas: Blu-ray-Titelliste braucht einen Player (Platzhalter oben)
+  auto pInputStream = CDVDFactoryInputStream::CreateInputStream(
+      URIUtils::IsBluray(item.GetPath()) ? &g_glasNoPlayer : nullptr, item);
+@@end
+
+=====================================================================================================================
+Spulen wie tvOS: erst Auswaehlen springt
+=====================================================================================================================
+
+tvOS springt beim Spulen nicht von selbst: das Ziel wandert mit dem Vorschaubild ueber der Leiste, Auswaehlen (oder
+Play/Pause) springt hin und spielt von dort, Zurueck bricht ab (Simulator-Messwerte, Player: "Auswaehlen springt an die
+Stelle"). Kodi springt nach videoplayer.seekdelay von selbst (Vero: 0 = sofort, die Vorschau war nie zu sehen). Mit
+skin.glas haelt CSeekHandler die Schritte, bis CApplication::OnAction Auswaehlen/Play (springen, aus der Pause weiter)
+oder Zurueck (verwerfen) meldet; Stopp und ein anderer Film verwerfen ebenfalls (FrameMove). Nur Video-Schritte (Links/Rechts), nicht Musik, nicht das
+analoge Spulen; mit anderen Skins bleibt alles wie bei Kodi.
+
+@@ after xbmc/SeekHandler.h | Spulen wie tvOS Methode
+  bool InProgress() const;
+@@--
+
+  //! Glas: Spulen wie tvOS - Auswaehlen/Play springt, Zurueck verwirft (CApplication::OnAction, zuerst)
+  bool GlasConfirmAction(const CAction& action);
+@@end
+
+@@ after xbmc/SeekHandler.h | Spulen wie tvOS Merker
+  bool m_requireSeek = false;
+@@--
+  bool m_glasConfirm = false; // Glas: Schritte bis zum Auswaehlen halten
+  std::string m_glasFile; // Glas: Film, in dem gespult wird (Stopp oder anderer Film verwirft)
+@@end
+
+@@ replace xbmc/SeekHandler.cpp | Spulen wie tvOS Beginn
+  if (!m_requireSeek)
+  {
+    // use only the first step forward/backward for a seek without a delay
+    if (!analogSeek && m_seekDelays.at(type) == 0)
+@@--
+  if (!m_requireSeek)
+  {
+    // Glas: wie tvOS erst beim Auswaehlen springen (Ziel mit Vorschaubild verschieben)
+    m_glasConfirm = !analogSeek && type == SEEK_TYPE_VIDEO &&
+                    CServiceBroker::GetSettingsComponent()->GetSettings()->GetString(
+                        CSettings::SETTING_LOOKANDFEEL_SKIN) == "skin.glas";
+    m_glasFile = m_glasConfirm ? g_application.CurrentFile() : std::string();
+    // use only the first step forward/backward for a seek without a delay
+    if (!analogSeek && m_seekDelays.at(type) == 0 && !m_glasConfirm)
+@@end
+
+@@ replace xbmc/SeekHandler.cpp | Spulen wie tvOS kein Selbstsprung
+  if (m_timer.GetElapsedMilliseconds() >= m_seekDelay && m_requireSeek)
+@@--
+  // Glas: gestoppt oder anderer Film (auch ohne Taste: JSON-RPC, naechste Folge) - offenes Spulen verwerfen
+  if (m_requireSeek && m_glasConfirm)
+  {
+    const auto glasPlayer = CServiceBroker::GetAppComponents().GetComponent<CApplicationPlayer>();
+    if (!glasPlayer->IsPlaying() || g_application.CurrentFile() != m_glasFile)
+    {
+      std::unique_lock<CCriticalSection> lock(m_critSection);
+      Reset();
+      m_seekChanged = true;
+    }
+  }
+  if (m_timer.GetElapsedMilliseconds() >= m_seekDelay && m_requireSeek && !m_glasConfirm) // Glas: wartet
+@@end
+
+@@ before xbmc/SeekHandler.cpp | Spulen wie tvOS Auswaehlen
+bool CSeekHandler::OnAction(const CAction &action)
+@@--
+bool CSeekHandler::GlasConfirmAction(const CAction& action)
+{
+  if (!m_requireSeek || !m_glasConfirm)
+    return false;
+
+  auto& components = CServiceBroker::GetAppComponents();
+  const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+  switch (action.GetID())
+  {
+    case ACTION_SELECT_ITEM:
+    case ACTION_SHOW_OSD:
+    case ACTION_PLAYER_PLAY:
+    case ACTION_PAUSE:
+    case ACTION_PLAYER_PLAYPAUSE:
+    {
+      {
+        std::unique_lock<CCriticalSection> lock(m_critSection);
+        appPlayer->SeekTimeRelative(static_cast<int64_t>(m_seekSize * 1000));
+        Reset();
+        m_seekChanged = true;
+      }
+      // wie tvOS: von der neuen Stelle aus spielen
+      if (appPlayer->IsPausedPlayback())
+        g_application.OnAction(CAction(ACTION_PAUSE));
+      return true;
+    }
+    case ACTION_NAV_BACK:
+    case ACTION_PREVIOUS_MENU:
+    case ACTION_SHOW_GUI:
+    {
+      std::unique_lock<CCriticalSection> lock(m_critSection);
+      Reset();
+      m_seekChanged = true;
+      return true;
+    }
+    case ACTION_STOP:
+    {
+      std::unique_lock<CCriticalSection> lock(m_critSection);
+      Reset();
+      m_seekChanged = true;
+      return false; // Kodi stoppt wie gewohnt
+    }
+    default:
+      return false;
+  }
+}
+
+@@end
+
+@@ after xbmc/application/Application.cpp | Spulen wie tvOS Eingang
+bool CApplication::OnAction(const CAction &action)
+{
+@@--
+  // Glas: Spulen wie tvOS - waehrend gespult wird, springt Auswaehlen/Play, Zurueck verwirft (SeekHandler.cpp)
+  if (GetComponent<CApplicationPlayer>()->GetSeekHandler().GlasConfirmAction(action))
+    return true;
+
+@@end
+
+=====================================================================================================================
+Buchstaben-Sprung: Container.JumpLetter(id,buchstabe)
+=====================================================================================================================
+
+Der Befehl waehlt im Container id des aktiven Fensters bzw. Dialogs den ersten Eintrag, dessen Name mit dem Buchstaben
+beginnt ("#": Ziffern und Zeichen; Artikel wie "Der"/"The" nach Kodis Einstellung filelists.ignorethewhensorting).
+Die Buchstabenleiste der Mediathek (Ansicht 57, rechts am Raster) springt so beim Bewegen mit (Testerbericht
+05.11.2026: "von Zahlen bis W scrollen"). Kodis eigener Sprung (Tastatur-Zeichen, OnJumpLetter) haengt Buchstaben
+innerhalb einer Sekunde zu einem Suchwort zusammen: A, dann B traf "Abraham".
+
+@@ after xbmc/interfaces/builtins/GUIContainerBuiltins.cpp | Buchstaben-Sprung include
+#include "utils/StringUtils.h"
+@@--
+#include "FileItem.h" // Glas: Container.JumpLetter
+#include "guilib/GUIListItem.h"
+#include "guilib/GUIWindow.h"
+#include "guilib/IGUIContainer.h"
+#include "guilib/guiinfo/GUIInfoLabels.h"
+#include "settings/Settings.h"
+#include "settings/SettingsComponent.h"
+#include "utils/CharsetConverter.h"
+#include "utils/SortUtils.h"
+
+#include <cwctype>
+@@end
+
+@@ before xbmc/interfaces/builtins/GUIContainerBuiltins.cpp | Buchstaben-Sprung Befehl
+static int SetSortMethod(const std::vector<std::string>& params)
+@@--
+/*! \brief Glas: im Container (Id im aktiven Fenster bzw. Dialog) den ersten Eintrag mit dem Anfangsbuchstaben waehlen
+ *  \param params (Id, Buchstabe A-Z oder #)
+ */
+static int JumpLetter(const std::vector<std::string>& params)
+{
+  if (params.size() < 2 || params[1].empty())
+    return -1;
+  const int id = atoi(params[0].c_str());
+  auto& windows = CServiceBroker::GetGUI()->GetWindowManager();
+  CGUIWindow* window = windows.GetWindow(windows.GetActiveWindowOrDialog());
+  CGUIControl* control = window ? window->GetControl(id) : nullptr;
+  if (!control || !control->IsContainer())
+  {
+    window = windows.GetWindow(windows.GetActiveWindow());
+    control = window ? window->GetControl(id) : nullptr;
+  }
+  if (!control || !control->IsContainer())
+    return -1;
+  const IGUIContainer* container = dynamic_cast<const IGUIContainer*>(control);
+  if (!container)
+    return -1;
+  std::wstring wanted;
+  g_charsetConverter.utf8ToW(params[1], wanted);
+  if (wanted.empty())
+    return -1;
+  const bool other = wanted[0] == L'#';
+  const wchar_t letter = static_cast<wchar_t>(std::towupper(wanted[0]));
+  const bool ignoreArticles = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(
+      CSettings::SETTING_FILELISTS_IGNORETHEWHENSORTING);
+  for (int i = 0;; ++i)
+  {
+    const std::shared_ptr<CGUIListItem> item = container->GetListItem(i, INFOFLAG_LISTITEM_ABSOLUTE);
+    if (!item)
+      break;
+    if (item->IsFileItem() && static_cast<const CFileItem*>(item.get())->IsParentFolder())
+      continue;
+    std::string label = item->GetLabel();
+    if (ignoreArticles)
+      label = SortUtils::RemoveArticles(label);
+    std::wstring wlabel;
+    g_charsetConverter.utf8ToW(label, wlabel);
+    if (wlabel.empty())
+      continue;
+    const wchar_t first = static_cast<wchar_t>(std::towupper(wlabel[0]));
+    const bool isLetter = first >= L'A' && first <= L'Z';
+    if (other ? !isLetter : first == letter)
+    {
+      CGUIMessage msg(GUI_MSG_ITEM_SELECT, window->GetID(), id, i);
+      control->OnMessage(msg);
+      return 0;
+    }
+  }
+  return 0;
+}
+
+@@end
+
+@@ replace xbmc/interfaces/builtins/GUIContainerBuiltins.cpp | Buchstaben-Sprung Liste
+           {"container.refresh",            {"Refresh current listing", 0, Refresh}},
+@@--
+           {"container.jumpletter",         {"Glas: select the first item starting with a letter (id,letter)", 2, JumpLetter}},
+           {"container.refresh",            {"Refresh current listing", 0, Refresh}},
+@@end
+
+=====================================================================================================================
+Maus-Spulvorschau: Zeit unter dem Zeiger auf der Zeitleiste (Slider mit action seek)
+=====================================================================================================================
+
+Mit der Maus springt Kodi beim Klick auf die Zeitleiste sofort bzw. beim Loslassen nach dem Ziehen, ohne dass der Skin
+erfaehrt, welche Stelle unter dem Zeiger liegt - die Spulvorschau (glasseek://) blieb mit der Maus aus (Nutzerbericht
+06.11.2026). Solange der Zeiger ueber einem Slider mit action seek steht oder ihn zieht, setzt der Kern
+Window(Home).Property(glas.scrub.percent) (0-100) und glas.scrub.time (Zeit wie Player.SeekTime); verliert der Slider
+den Fokus (Zeiger weg, OSD zu) oder werden seine Ressourcen frei, leert er beide. Springen bleibt wie bei Kodi.
+
+@@ after xbmc/guilib/GUISliderControl.h | Maus-Spulvorschau Kopf
+  void FreeResources(bool immediately = false) override;
+@@--
+  void SetFocus(bool focus) override; // Glas: Maus-Spulvorschau leeren
+@@end
+
+@@ after xbmc/guilib/GUISliderControl.cpp | Maus-Spulvorschau include
+#include "utils/StringUtils.h"
+@@--
+#include "application/ApplicationComponents.h" // Glas: Maus-Spulvorschau
+#include "application/ApplicationPlayer.h"
+#include "guilib/GUIWindow.h"
+#include "guilib/WindowIDs.h"
+#include "utils/TimeFormat.h"
+#include "utils/Variant.h"
+
+#include <algorithm>
+
+namespace
+{
+const CGUISliderControl* g_glasScrubOwner = nullptr;
+
+void GlasScrubSet(const std::string& percent, const std::string& time)
+{
+  CGUIComponent* gui = CServiceBroker::GetGUI();
+  CGUIWindow* home = gui ? gui->GetWindowManager().GetWindow(WINDOW_HOME) : nullptr;
+  if (!home)
+    return;
+  home->SetProperty("glas.scrub.percent", CVariant{percent});
+  home->SetProperty("glas.scrub.time", CVariant{time});
+}
+} // namespace
+@@end
+
+@@ after xbmc/guilib/GUISliderControl.cpp | Maus-Spulvorschau Ereignis
+EVENT_RESULT CGUISliderControl::OnMouseEvent(const CPoint& point, const MOUSE::CMouseEvent& event)
+{
+@@--
+  // Glas: Zeiger ueber der Zeitleiste bzw. Ziehen -> Stelle und Zeit darunter fuer die Spulvorschau des Skins. Zeitleiste
+  // = Slider mit action seek (OSD) oder ein Slider ohne Aktion in der Spulleiste (DialogSeekBar 401/403 zeichnen dort die
+  // Abspielmarke und liegen ueber dem OSD - sie bekamen die Maus, ein Klick bewirkte nichts); diese springen beim Klick
+  // bzw. Loslassen selbst an die Stelle
+  const bool glasSeekBar = !m_action && GetParentID() == WINDOW_DIALOG_SEEK_BAR && m_orientation == HORIZONTAL;
+  float glasPercent = (point.x - m_guiBackground->GetXPosition()) / m_guiBackground->GetWidth();
+  glasPercent = std::max(0.0f, std::min(1.0f, glasPercent));
+  if (glasSeekBar && (event.m_id == ACTION_MOUSE_LEFT_CLICK || event.m_id == ACTION_MOUSE_DRAG_END))
+  {
+    const auto& glasSeekPlayer = CServiceBroker::GetAppComponents().GetComponent<CApplicationPlayer>();
+    if (glasSeekPlayer && glasSeekPlayer->IsPlaying())
+      glasSeekPlayer->SeekPercentage(glasPercent * 100.0f);
+  }
+  if (((m_action && m_action->infoCode == PLAYER_PROGRESS && m_orientation == HORIZONTAL) || glasSeekBar) &&
+      (event.m_id == ACTION_MOUSE_MOVE || event.m_id == ACTION_MOUSE_DRAG))
+  {
+    const auto& glasPlayer = CServiceBroker::GetAppComponents().GetComponent<CApplicationPlayer>();
+    const int64_t glasTotal = glasPlayer ? glasPlayer->GetTotalTime() : 0;
+    if (glasTotal > 0)
+    {
+      const long glasSec = static_cast<long>(glasTotal * glasPercent / 1000.0f);
+      const TIME_FORMAT glasFormat = glasTotal >= 3600 * 1000 ? TIME_FORMAT_HH_MM_SS : TIME_FORMAT_MM_SS;
+      GlasScrubSet(std::to_string(static_cast<int>(glasPercent * 100.0f)),
+                   StringUtils::SecondsToTimeString(glasSec, glasFormat));
+      g_glasScrubOwner = this;
+    }
+  }
+  else if (event.m_id == ACTION_MOUSE_DRAG_END && g_glasScrubOwner == this)
+  {
+    g_glasScrubOwner = nullptr;
+    GlasScrubSet("", "");
+  }
+@@end
+
+@@ before xbmc/guilib/GUISliderControl.cpp | Maus-Spulvorschau Fokus
+EVENT_RESULT CGUISliderControl::OnMouseEvent(const CPoint& point, const MOUSE::CMouseEvent& event)
+@@--
+void CGUISliderControl::SetFocus(bool focus)
+{
+  // Glas: Zeiger verlaesst die Zeitleiste (oder das OSD schliesst) - Maus-Spulvorschau leeren
+  if (!focus && g_glasScrubOwner == this)
+  {
+    g_glasScrubOwner = nullptr;
+    GlasScrubSet("", "");
+  }
+  CGUIControl::SetFocus(focus);
+}
+
+@@end
+
+@@ after xbmc/guilib/GUISliderControl.cpp | Maus-Spulvorschau frei
+void CGUISliderControl::FreeResources(bool immediately)
+{
+@@--
+  if (g_glasScrubOwner == this) // Glas: Maus-Spulvorschau leeren
+  {
+    g_glasScrubOwner = nullptr;
+    GlasScrubSet("", "");
+  }
+@@end
+
+=====================================================================================================================
+Gummiband am Ende einer Liste (src/xbmc/guilib/GlasBand.h): Tasten und Mausrad federn ueber das Ende hinaus wie tvOS
+=====================================================================================================================
+
+@@ after xbmc/guilib/GUIControl.cpp | Gummiband include
+#include "GlasGrow.h" // Glas: Effekt grow
+@@--
+#include "GlasBand.h" // Glas: Gummiband am Ende einer Liste
+@@end
+
+@@ after xbmc/guilib/GUIControl.cpp | Gummiband vergessen
+  GLAS_FADE::Forget(this);
+@@--
+  GLAS_BAND::Forget(this);
+@@end
+
+@@ after xbmc/guilib/GUIControl.cpp | Gummiband zeichnen
+  GLAS_GROW::End(this); // Glas: Wachstum fuer Bild und Knopf ablegen
+@@--
+  changed |= GLAS_BAND::Apply(this, m_transform, currentTime); // Glas: Gummiband
+@@end
+
+@@ replace xbmc/guilib/GUIControl.cpp | Gummiband Richtungen
+void CGUIControl::OnUp()
+{
+  Navigate(ACTION_MOVE_UP);
+}
+
+void CGUIControl::OnDown()
+{
+  Navigate(ACTION_MOVE_DOWN);
+}
+
+void CGUIControl::OnLeft()
+{
+  Navigate(ACTION_MOVE_LEFT);
+}
+
+void CGUIControl::OnRight()
+{
+  Navigate(ACTION_MOVE_RIGHT);
+}
+@@--
+// Glas: bleibt der Fokus hier (Ende einer Grouplist), federt sie (GlasBand.h); Listen melden es selbst
+void CGUIControl::OnUp()
+{
+  Navigate(ACTION_MOVE_UP);
+  if (!IsContainer())
+    GLAS_BAND::AfterMove(this, ACTION_MOVE_UP, -1);
+}
+
+void CGUIControl::OnDown()
+{
+  Navigate(ACTION_MOVE_DOWN);
+  if (!IsContainer())
+    GLAS_BAND::AfterMove(this, ACTION_MOVE_DOWN, -1);
+}
+
+void CGUIControl::OnLeft()
+{
+  Navigate(ACTION_MOVE_LEFT);
+  if (!IsContainer())
+    GLAS_BAND::AfterMove(this, ACTION_MOVE_LEFT, -1);
+}
+
+void CGUIControl::OnRight()
+{
+  Navigate(ACTION_MOVE_RIGHT);
+  if (!IsContainer())
+    GLAS_BAND::AfterMove(this, ACTION_MOVE_RIGHT, -1);
+}
+@@end
+
+@@ after xbmc/guilib/GUIBaseContainer.cpp | Gummiband include
+#include "GlasFit.h" // Glas: <fititems>
+@@--
+#include "GlasBand.h" // Glas: Gummiband am Ende
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband hoch
+  // with horizontal lists it doesn't make much sense to have multiselect labels
+  CGUIControl::OnUp();
+}
+@@--
+  // with horizontal lists it doesn't make much sense to have multiselect labels
+  CGUIControl::OnUp();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_UP, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband runter
+  // with horizontal lists it doesn't make much sense to have multiselect labels
+  CGUIControl::OnDown();
+}
+@@--
+  // with horizontal lists it doesn't make much sense to have multiselect labels
+  CGUIControl::OnDown();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_DOWN, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband links
+  CGUIControl::OnLeft();
+}
+@@--
+  CGUIControl::OnLeft();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_LEFT, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband rechts
+  CGUIControl::OnRight();
+}
+@@--
+  CGUIControl::OnRight();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_RIGHT, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband Mausrad
+  else if (event.m_id == ACTION_MOUSE_WHEEL_UP)
+  {
+    Scroll(-1);
+    return EVENT_RESULT_HANDLED;
+  }
+  else if (event.m_id == ACTION_MOUSE_WHEEL_DOWN)
+  {
+    Scroll(1);
+    return EVENT_RESULT_HANDLED;
+  }
+@@--
+  else if (event.m_id == ACTION_MOUSE_WHEEL_UP)
+  {
+    // Glas: rollt die Liste nicht mehr (Anfang), federt sie (GlasBand.h)
+    const int glasOffset = GetOffset();
+    Scroll(-1);
+    if (GetOffset() == glasOffset)
+      GLAS_BAND::Kick(this, m_orientation == VERTICAL ? 0.0f : 1.0f, m_orientation == VERTICAL ? 1.0f : 0.0f);
+    return EVENT_RESULT_HANDLED;
+  }
+  else if (event.m_id == ACTION_MOUSE_WHEEL_DOWN)
+  {
+    const int glasOffset = GetOffset();
+    Scroll(1);
+    if (GetOffset() == glasOffset)
+      GLAS_BAND::Kick(this, m_orientation == VERTICAL ? 0.0f : -1.0f, m_orientation == VERTICAL ? -1.0f : 0.0f);
+    return EVENT_RESULT_HANDLED;
+  }
+@@end
+
+Kein Umlauf am Ende (nur mit dem Glas-Skin, GLAS_BAND::Wraps): Listen und Grouplists ohne eigenes Ziel liefen bei Kodi
+im Kreis - in tvOS gibt es das nicht, und am Ende fehlte das Federn
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband kein Umlauf up
+  CGUIAction action = GetAction(ACTION_MOVE_UP);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_UP);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband kein Umlauf down
+  CGUIAction action = GetAction(ACTION_MOVE_DOWN);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_DOWN);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband kein Umlauf left
+  CGUIAction action = GetAction(ACTION_MOVE_LEFT);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_LEFT);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIBaseContainer.cpp | Gummiband kein Umlauf right
+  CGUIAction action = GetAction(ACTION_MOVE_RIGHT);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_RIGHT);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIControlGroupList.cpp | Gummiband kein Umlauf Grouplist unten erste
+        if (!afterAction.HasActionsMeetingCondition() || afterAction.GetNavigation() == GetID()) // we're wrapping around bottom->top, so we have to update the last item
+@@--
+        if (GLAS_BAND::Wraps(afterAction, GetID())) // we're wrapping around bottom->top, so we have to update the last item
+@@end
+
+@@ replace xbmc/guilib/GUIControlGroupList.cpp | Gummiband kein Umlauf Grouplist oben erste
+        if (!beforeAction.HasActionsMeetingCondition() || beforeAction.GetNavigation() == GetID())   // we're wrapping around top->bottom
+@@--
+        if (GLAS_BAND::Wraps(beforeAction, GetID()))   // we're wrapping around top->bottom
+@@end
+
+@@ replace xbmc/guilib/GUIControlGroupList.cpp | Gummiband kein Umlauf Grouplist oben letzte
+        if (!beforeAction.HasActionsMeetingCondition() || beforeAction.GetNavigation() == GetID())   // we're wrapping around top->bottom, so we have to update the first item
+@@--
+        if (GLAS_BAND::Wraps(beforeAction, GetID()))   // we're wrapping around top->bottom, so we have to update the first item
+@@end
+
+@@ replace xbmc/guilib/GUIControlGroupList.cpp | Gummiband kein Umlauf Grouplist unten letzte
+        if (!afterAction.HasActionsMeetingCondition() || afterAction.GetNavigation() == GetID()) // we're wrapping around bottom->top
+@@--
+        if (GLAS_BAND::Wraps(afterAction, GetID())) // we're wrapping around bottom->top
+@@end
+
+@@ after xbmc/guilib/GUIControlGroupList.cpp | Gummiband kein Umlauf include
+#include "GUIControlGroupList.h"
+@@--
+#include "GlasBand.h" // Glas: kein Umlauf ohne Ziel
+@@end
+
+Raster (CGUIPanelContainer hat eigene Richtungen): kein Umlauf ohne Ziel und Gummiband wie die uebrigen Listen
+
+@@ after xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster include
+#include "GUIPanelContainer.h"
+@@--
+#include "GlasBand.h" // Glas: Gummiband, kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster kein Umlauf left
+  CGUIAction action = GetAction(ACTION_MOVE_LEFT);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_LEFT);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster kein Umlauf right
+  CGUIAction action = GetAction(ACTION_MOVE_RIGHT);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_RIGHT);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster kein Umlauf up
+  CGUIAction action = GetAction(ACTION_MOVE_UP);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_UP);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster kein Umlauf down
+  CGUIAction action = GetAction(ACTION_MOVE_DOWN);
+  bool wrapAround = action.GetNavigation() == GetID() || !action.HasActionsMeetingCondition();
+@@--
+  CGUIAction action = GetAction(ACTION_MOVE_DOWN);
+  bool wrapAround = GLAS_BAND::Wraps(action, GetID()); // Glas: kein Umlauf ohne Ziel
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster left
+  CGUIControl::OnLeft();
+}
+@@--
+  CGUIControl::OnLeft();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_LEFT, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster right
+  return CGUIControl::OnRight();
+}
+@@--
+  CGUIControl::OnRight();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_RIGHT, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster up
+  CGUIControl::OnUp();
+}
+@@--
+  CGUIControl::OnUp();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_UP, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+@@ replace xbmc/guilib/GUIPanelContainer.cpp | Gummiband Raster down
+  return CGUIControl::OnDown();
+}
+@@--
+  CGUIControl::OnDown();
+  GLAS_BAND::AfterMove(this, ACTION_MOVE_DOWN, m_orientation == VERTICAL ? 1 : 0); // Glas: Gummiband
+}
+@@end
+
+=====================================================================================================================
+Mehrfachauswahl wie tvOS (nur mit dem Glas-Skin): Haken gelten sofort, Zurueck uebernimmt (Nutzerbericht 06.11.2026).
+Kodi verwarf mit Zurueck alle Aenderungen und brauchte dafuer "OK". "OK" und "Abbrechen" zeigt der Skin nur noch mit der
+Maus-Bedienung (tools/dev/gen_dialogselect.py)
+=====================================================================================================================
+
+@@ after xbmc/dialogs/GUIDialogSelect.cpp | Mehrfachauswahl include
+#include "GUIDialogSelect.h"
+@@--
+#include "guilib/GlasBand.h" // Glas: GLAS_BAND::GlasSkin
+@@end
+
+@@ replace xbmc/dialogs/GUIDialogSelect.cpp | Mehrfachauswahl Zurueck
+bool CGUIDialogSelect::OnBack(int actionID)
+{
+  m_selectedItem = nullptr;
+@@--
+bool CGUIDialogSelect::OnBack(int actionID)
+{
+  // Glas: in der Mehrfachauswahl uebernimmt Zurueck die Haken (die Liste bleibt, GUI_MSG_WINDOW_DEINIT sammelt sie)
+  if (m_multiSelection && GLAS_BAND::GlasSkin())
+  {
+    m_bConfirmed = true;
+    return CGUIDialogBoxBase::OnBack(actionID);
+  }
+  m_selectedItem = nullptr;
+@@end
+
+
+=====================================================================================================================
+Kontextmenue Symbole und rote Eintraege wie tvOS (src/xbmc/dialogs/GlasCtxMenu.h, Nutzerbericht 06.11.2026)
+=====================================================================================================================
+
+@@ after xbmc/guilib/GUIButtonControl.h | Kontextmenue Symbole Zugriff
+  CGUILabel& GlasLabel2() { return m_label2; } // Glas: <textcolor2>, <focusedcolor2>
+@@--
+  CGUILabel& GlasLabel() { return m_label; } // Glas: Farben je Knopf (GlasCtxMenu.h)
+@@end
+
+@@ after xbmc/dialogs/GUIDialogContextMenu.cpp | Kontextmenue Symbole include
+#include "guilib/GlasFocusItem.h" // Glas: Kontextmenue neben der Kachel
+@@--
+#include "GlasCtxMenu.h" // Glas: Symbole und rote Eintraege
+@@end
+
+@@ before xbmc/dialogs/GUIDialogContextMenu.cpp | Kontextmenue Symbole Beginn
+  // add our buttons
+@@--
+  const bool glasIcons = GLAS_CTXMENU::Begin(*this, m_buttons); // Glas: Symbole links (GlasCtxMenu.h)
+@@end
+
+@@ after xbmc/dialogs/GUIDialogContextMenu.cpp | Kontextmenue Symbole je Knopf
+        pButton->SetLabel(m_buttons[i].second);
+@@--
+        GLAS_CTXMENU::Decorate(*this, *pButton, i, m_buttons[i].second, glasIcons); // Glas
+@@end
+
+=====================================================================================================================
+Ungesehenes nur beim Oeffnen waehlen (Testerbericht 06.11.2026, nur mit dem Glas-Skin): Mit Kodis Einstellung "Erstes
+ungesehenes Element auswaehlen: Immer" sprang die Auswahl nach jedem Neuladen derselben Seite (z. B. nach "als gesehen
+markieren", Taste w) auf die erste ungesehene Staffel bzw. Folge - Staffel 12 markiert, danach stand die Reihe bei
+Staffel 4. Beim Oeffnen einer Seite gilt die Einstellung weiter
+=====================================================================================================================
+
+@@ after xbmc/video/windows/GUIWindowVideoNav.cpp | Ungesehenes nur beim Oeffnen include
+#include "GUIWindowVideoNav.h"
+@@--
+#include "guilib/GlasBand.h" // Glas: GLAS_BAND::GlasSkin
+@@end
+
+@@ replace xbmc/video/windows/GUIWindowVideoNav.cpp | Ungesehenes nur beim Oeffnen Update
+bool CGUIWindowVideoNav::Update(const std::string &strDirectory, bool updateFilterPath /* = true */)
+{
+  if (!CGUIWindowVideoBase::Update(strDirectory, updateFilterPath))
+    return false;
+
+  SelectFirstUnwatched();
+@@--
+bool CGUIWindowVideoNav::Update(const std::string &strDirectory, bool updateFilterPath /* = true */)
+{
+  // Glas: dieselbe Seite neu geladen (Refresh) - Auswahl behalten statt aufs erste Ungesehene zu springen
+  const bool glasRefresh = GLAS_BAND::GlasSkin() && !strDirectory.empty() && strDirectory == m_vecItems->GetPath();
+  if (!CGUIWindowVideoBase::Update(strDirectory, updateFilterPath))
+    return false;
+
+  if (!glasRefresh)
+    SelectFirstUnwatched();
+@@end
