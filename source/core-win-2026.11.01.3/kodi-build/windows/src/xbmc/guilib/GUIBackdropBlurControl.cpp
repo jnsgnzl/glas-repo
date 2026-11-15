@@ -388,7 +388,7 @@ float4 main(PS_IN i) : SV_TARGET
 }
 )";
 
-//! Liquid Glass (style liquid), sinngemaess aus LIQUID_SHADER der GLES-Fassung. Dort rechnet der Shader in
+//! Live-Glas (style liquid), sinngemaess aus LIQUID_SHADER der GLES-Fassung. Dort rechnet der Shader in
 //! Framebuffer-Pixeln mit y nach oben; hier zeigt y nach unten (local, uv). Die Richtung des Lichts ist deshalb
 //! gespiegelt (L = (-0.20, -0.98)): Licht von oben, helle Kante oben wie auf der Vero.
 const char* LIQUID_SHADER = R"(
@@ -438,7 +438,7 @@ float4 main(PS_IN i) : SV_TARGET
 }
 )";
 
-//! Liquid Glass innen (jenseits des Rands): Lichtbrechung, scharfer Griff, Lichtkante und Schein sind dort null
+//! Live-Glas innen (jenseits des Rands): Lichtbrechung, scharfer Griff, Lichtkante und Schein sind dort null
 const char* LIQUID_INNER_SHADER = R"(
 float4 main(PS_IN i) : SV_TARGET
 {
@@ -1599,7 +1599,7 @@ void CGUIBackdropBlurControl::Render()
       return;
   }
 
-  // Staerke: tiefste Stufe der Pyramide; blurradius 48 (Apple-Material) -> 1/16 der Bildschirmaufloesung
+  // Staerke: tiefste Stufe der Pyramide; blurradius 48 (Vorbild-Material) -> 1/16 der Bildschirmaufloesung
   int deepest = 4;
   while (deepest < 64 && deepest * 3 < m_blurRadius * sx)
     deepest *= 2;

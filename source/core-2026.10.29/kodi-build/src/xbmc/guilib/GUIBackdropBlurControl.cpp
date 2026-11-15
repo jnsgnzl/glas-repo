@@ -350,9 +350,9 @@ void main()
 }
 )";
 
-//! Liquid Glass (style liquid): wie tvOS 26 - am Rand Lichtbrechung (Inhalt von weiter aussen, teils aus dem
-//! schaerferen Griff), Material hell wie Apples Glas (9 % Weiss, im Apple-Video gemessen; erst ueber sehr hellem
-//! Hintergrund dunkler, damit weisser Text lesbar bleibt). Lichtkante wie im Apple-Handbuch (tvOS 27, Dock und
+//! Live-Glas (style liquid): wie das Vorbild - am Rand Lichtbrechung (Inhalt von weiter aussen, teils aus dem
+//! schaerferen Griff), Material hell wie des Vorbilds Glas (9 % Weiss, im Vorbild-Video gemessen; erst ueber sehr hellem
+//! Hintergrund dunkler, damit weisser Text lesbar bleibt). Lichtkante wie im Vorbild-Handbuch (das Vorbild, Dock und
 //! Uhr-Kapsel ueber Schwarz gemessen, 29.10.2026): Licht von oben, oben Weiss ~23 %, Seiten ~4 %, unten ~8 %, kaum
 //! Schein nach innen. Koordinaten: Framebuffer-Pixel, y nach oben.
 const char* LIQUID_SHADER = R"(
@@ -386,7 +386,7 @@ void main()
   vec2 n = g * sign(p);
   float rim = 1.0 - smoothstep(0.0, rimW, inside);
   float rim2 = rim * rim;
-  // Linse wie Apples Liquid Glass: gewoelbter Rand ueber lensW (Eckradius, hoechstens 48 px), der den Hintergrund
+  // Linse wie das Glas des Vorbilds: gewoelbter Rand ueber lensW (Eckradius, hoechstens 48 px), der den Hintergrund
   // von aussen hereinholt - an der Kante um 0,8 lensW, nach innen quadratisch auslaufend (Inhalt am Rand gestaucht)
   float lensW = max(6.0, min(u_radius, 48.0 * u_px));
   float lens = 1.0 - clamp(inside / lensW, 0.0, 1.0);
@@ -416,7 +416,7 @@ void main()
 }
 )";
 
-//! Liquid Glass innen (jenseits des Rands): dort sind Lichtbrechung, scharfer Griff, Lichtkante und Schein genau null.
+//! Live-Glas innen (jenseits des Rands): dort sind Lichtbrechung, scharfer Griff, Lichtkante und Schein genau null.
 //! Composite zeichnet das Innere einer Flaeche mit diesem schlanken Shader (ein Texturzugriff) und nur die Randstreifen
 //! mit LIQUID_SHADER - gleiches Ergebnis. Grosse Flaechen (Popover) kosteten in 3D sonst zu viel: zwei Augen, zweiter,
 //! versetzter Texturzugriff je Pixel (17.10.2026: Untertitelmenue 6-10 statt 0-2 verspaetete Bilder/s; eine
@@ -856,7 +856,7 @@ bool OverlapsMuch(const float a[4], const float b[4])
 
 /*!
  \brief Gemeinsamer Hintergrund aller Glasflaechen: hoechstens ein Griff je Bild ueber den ganzen Viewport,
-        stark verkleinert und weichgezeichnet (Apple-Material ist so unscharf, dass 1/16 als tiefste Stufe reicht).
+        stark verkleinert und weichgezeichnet (Vorbild-Material ist so unscharf, dass 1/16 als tiefste Stufe reicht).
         Jede Flaeche schneidet sich beim Zusammensetzen ihren Teil heraus.
 
  Griff mitten im Bild beendet auf Mali den laufenden Render-Pass; jeder weitere Durchgang im selben Bild liess den
@@ -2035,7 +2035,7 @@ void CGUIBackdropBlurControl::Render()
   if (rect[2] - rect[0] < 2 || rect[3] - rect[1] < 2)
     return;
 
-  // Staerke: tiefste Stufe der Pyramide; blurradius 48 (Apple-Material) -> 1/16 der Bildschirmaufloesung
+  // Staerke: tiefste Stufe der Pyramide; blurradius 48 (Vorbild-Material) -> 1/16 der Bildschirmaufloesung
   int deepest = 4;
   while (deepest < 64 && deepest * 3 < m_blurRadius * sx)
     deepest *= 2;

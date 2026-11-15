@@ -230,8 +230,8 @@ void main()
 }
 )";
 
-//! Liquid Glass (style liquid): wie tvOS 26 - am Rand Lichtbrechung (Inhalt von weiter aussen, teils aus dem
-//! schaerferen Griff), Material hell wie Apples Glas (9 % Weiss, im Apple-Video gemessen; erst ueber sehr hellem
+//! Live-Glas (style liquid): wie das Vorbild - am Rand Lichtbrechung (Inhalt von weiter aussen, teils aus dem
+//! schaerferen Griff), Material hell wie des Vorbilds Glas (9 % Weiss, im Vorbild-Video gemessen; erst ueber sehr hellem
 //! Hintergrund dunkler, damit weisser Text lesbar bleibt), Lichtkante oben links am staerksten, gegenueber
 //! schwaecher, weicher Schein innen am Rand. Koordinaten: Framebuffer-Pixel, y nach oben.
 const char* LIQUID_SHADER = R"(
@@ -284,7 +284,7 @@ void main()
 }
 )";
 
-//! Liquid Glass innen (jenseits des Rands): dort sind Lichtbrechung, scharfer Griff, Lichtkante und Schein genau null.
+//! Live-Glas innen (jenseits des Rands): dort sind Lichtbrechung, scharfer Griff, Lichtkante und Schein genau null.
 //! Composite zeichnet das Innere einer Flaeche mit diesem schlanken Shader (ein Texturzugriff) und nur die Randstreifen
 //! mit LIQUID_SHADER - gleiches Ergebnis. Grosse Flaechen (Popover) kosteten in 3D sonst zu viel: zwei Augen, zweiter,
 //! versetzter Texturzugriff je Pixel (17.10.2026: Untertitelmenue 6-10 statt 0-2 verspaetete Bilder/s; eine
@@ -710,7 +710,7 @@ bool Overlaps(const float a[4], const float b[4])
 
 /*!
  \brief Gemeinsamer Hintergrund aller Glasflaechen: hoechstens ein Griff je Bild ueber den ganzen Viewport,
-        stark verkleinert und weichgezeichnet (Apple-Material ist so unscharf, dass 1/16 als tiefste Stufe reicht).
+        stark verkleinert und weichgezeichnet (Vorbild-Material ist so unscharf, dass 1/16 als tiefste Stufe reicht).
         Jede Flaeche schneidet sich beim Zusammensetzen ihren Teil heraus.
 
  Griff mitten im Bild beendet auf Mali den laufenden Render-Pass (alles bisher Gezeichnete wird weggeschrieben und
@@ -1495,7 +1495,7 @@ void CGUIBackdropBlurControl::Render()
   if (rect[2] - rect[0] < 2 || rect[3] - rect[1] < 2)
     return;
 
-  // Staerke: tiefste Stufe der Pyramide; blurradius 48 (Apple-Material) -> 1/16 der Bildschirmaufloesung
+  // Staerke: tiefste Stufe der Pyramide; blurradius 48 (Vorbild-Material) -> 1/16 der Bildschirmaufloesung
   int deepest = 4;
   while (deepest < 64 && deepest * 3 < m_blurRadius * sx)
     deepest *= 2;

@@ -23,7 +23,7 @@
  Kodi without this build ignores the unknown tag.
 
  Skin tag <focusshadow> on the same buttons: a texture under the focused button that may reach beyond it (shadow of
- the focused settings row, tvOS 27.2 Hell). left/top/right/bottom = how far it reaches out on each side.
+ the focused settings row, das Vorbild Hell). left/top/right/bottom = how far it reaches out on each side.
 
    <focusshadow left="40" top="34" right="40" bottom="40" condition="...">
      <texture border="71" colordiffuse="row_shadow">glas/shadow-landscape-20.png</texture>
@@ -33,7 +33,7 @@
  is drawn without the innermost clip region (the grouplist's); outer ones (a dialog) stay.
 
  Skin tags <textcolor2> and <focusedcolor2> on the same buttons: colors of label2 (the value on the right of a
- settings row; on spincontrolex and sliderex their value text), which Kodi otherwise draws in the colors of label (tvOS 27.2 Hell: values 105 grey, also on the
+ settings row; on spincontrolex and sliderex their value text), which Kodi otherwise draws in the colors of label (das Vorbild Hell: values 105 grey, also on the
  focused row). Kodi without this build ignores them.
 */
 

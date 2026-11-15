@@ -1,6 +1,6 @@
 # Glas – Kodi-Repository
 
-Kodi-21-Skin im Stil von tvOS (Apple TV), mit Glas Helper und – nur auf der Vero V – einem eigenen Kodi-Build für
+Kodi-21-Skin Glas mit Glas Helper und – nur auf der Vero V – einem eigenen Kodi-Build für
 echtes Live-Glas. Dieses Repository enthält nur die fertigen Pakete und den Quelltext des Kodi-Builds.
 
 ## Installieren
@@ -13,7 +13,7 @@ Voraussetzung: Kodi 21 „Omega“ (OSMC aktuell, LibreELEC 12, Windows …) mit
 3. **Repository installieren:** Einstellungen › Add-ons › Aus ZIP-Datei installieren › `glas` ›
    `repository.glas-….zip`.
 4. **Glas installieren:** Add-ons › Aus Repository installieren › Glas Repository › Skins › Glas › Installieren.
-   Kodi holt dabei den Glas Helper und dessen Abhängigkeiten (TMDb Helper, Aerial, Up Next, Apple-TV-Klänge) aus dem
+   Kodi holt dabei den Glas Helper und dessen Abhängigkeiten (TMDb Helper, Aerial, Up Next, Oberflächenklänge) aus dem
    offiziellen Kodi-Repository mit. Am Ende „Skin verwenden?“ und „Änderung beibehalten?“ mit Ja bestätigen.
 5. **Kodi einmal neu starten.** Beim ersten Start richtet Glas die Bedienung ein (Home lang drücken =
    Kontrollzentrum) und fragt, ob Kodi Add-on-Updates nur anzeigen soll. Empfohlen: Ja – dann bestätigst du jedes
@@ -58,6 +58,6 @@ Einstellungen › Oberfläche › Skin › Estuary.
 - Glas Helper: MIT.
 - Live-Glas-Kern: Kodi (GPL 2.0) mit OSMCs Patches und den Glas-Änderungen. Der Quelltext zu jedem Build liegt in
   [`source/`](source/), die Builds selbst unter [Releases](https://github.com/jnsgnzl/glas-repo/releases).
-- Apple-Klänge und Bildschirmschoner kommen aus dem offiziellen Kodi-Repository und sind nicht Teil von Glas.
+- Oberflächenklänge und Bildschirmschoner kommen aus dem offiziellen Kodi-Repository und sind nicht Teil von Glas.
 
 Glas ist ein privates Hobbyprojekt ohne Gewähr. Fragen und Rückmeldungen gern im Forum-Thread.

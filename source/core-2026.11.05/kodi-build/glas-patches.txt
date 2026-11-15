@@ -527,7 +527,7 @@ Ja/Nein-Dialog: Rolle fuer den Skin (zerstoerende Aktion rot, vorausgewaehlter K
 
   CGUIDialogBoxBase::OnInitWindow();
 @@--
-  // Glas: Rolle der Rueckfrage als Fenster-Eigenschaften fuer den Skin (tvOS: zerstoerende Aktion rot und Fokus auf
+  // Glas: Rolle der Rueckfrage als Fenster-Eigenschaften fuer den Skin (das Vorbild: zerstoerende Aktion rot und Fokus auf
   // "Abbrechen", sonst Fokus auf der Hauptaktion). glas.yesno = true (Ja/Nein-Dialog dieses Builds), glas.destructive =
   // true, wenn Titel, Text oder der Ja-Knopf "Loeschen" bzw. "Entfernen" (117/15015, in der Sprache der Oberflaeche)
   // enthalten. Gesetzt vor CGUIWindow::OnInitWindow, also vor den onload-Aktionen des Skins
@@ -1100,32 +1100,32 @@ void GlasSeekClose();
 @@end
 
 =====================================================================================================================
-Spulen wie tvOS: erst Auswaehlen springt
+Spulen wie das Vorbild: erst Auswaehlen springt
 =====================================================================================================================
 
-tvOS springt beim Spulen nicht von selbst: das Ziel wandert mit dem Vorschaubild ueber der Leiste, Auswaehlen (oder
+das Vorbild springt beim Spulen nicht von selbst: das Ziel wandert mit dem Vorschaubild ueber der Leiste, Auswaehlen (oder
 Play/Pause) springt hin und spielt von dort, Zurueck bricht ab (Simulator-Messwerte, Player: "Auswaehlen springt an die
 Stelle"). Kodi springt nach videoplayer.seekdelay von selbst (Vero: 0 = sofort, die Vorschau war nie zu sehen). Mit
 skin.glas haelt CSeekHandler die Schritte, bis CApplication::OnAction Auswaehlen/Play (springen, aus der Pause weiter)
 oder Zurueck (verwerfen) meldet; Stopp und ein anderer Film verwerfen ebenfalls (FrameMove). Nur Video-Schritte (Links/Rechts), nicht Musik, nicht das
 analoge Spulen; mit anderen Skins bleibt alles wie bei Kodi.
 
-@@ after xbmc/SeekHandler.h | Spulen wie tvOS Methode
+@@ after xbmc/SeekHandler.h | Spulen wie das Vorbild Methode
   bool InProgress() const;
 @@--
 
-  //! Glas: Spulen wie tvOS - Auswaehlen/Play springt, Zurueck verwirft (CApplication::OnAction, zuerst)
+  //! Glas: Spulen wie das Vorbild - Auswaehlen/Play springt, Zurueck verwirft (CApplication::OnAction, zuerst)
   bool GlasConfirmAction(const CAction& action);
 @@end
 
-@@ after xbmc/SeekHandler.h | Spulen wie tvOS Merker
+@@ after xbmc/SeekHandler.h | Spulen wie das Vorbild Merker
   bool m_requireSeek = false;
 @@--
   bool m_glasConfirm = false; // Glas: Schritte bis zum Auswaehlen halten
   std::string m_glasFile; // Glas: Film, in dem gespult wird (Stopp oder anderer Film verwirft)
 @@end
 
-@@ replace xbmc/SeekHandler.cpp | Spulen wie tvOS Beginn
+@@ replace xbmc/SeekHandler.cpp | Spulen wie das Vorbild Beginn
   if (!m_requireSeek)
   {
     // use only the first step forward/backward for a seek without a delay
@@ -1133,7 +1133,7 @@ analoge Spulen; mit anderen Skins bleibt alles wie bei Kodi.
 @@--
   if (!m_requireSeek)
   {
-    // Glas: wie tvOS erst beim Auswaehlen springen (Ziel mit Vorschaubild verschieben)
+    // Glas: wie das Vorbild erst beim Auswaehlen springen (Ziel mit Vorschaubild verschieben)
     m_glasConfirm = !analogSeek && type == SEEK_TYPE_VIDEO &&
                     CServiceBroker::GetSettingsComponent()->GetSettings()->GetString(
                         CSettings::SETTING_LOOKANDFEEL_SKIN) == "skin.glas";
@@ -1142,7 +1142,7 @@ analoge Spulen; mit anderen Skins bleibt alles wie bei Kodi.
     if (!analogSeek && m_seekDelays.at(type) == 0 && !m_glasConfirm)
 @@end
 
-@@ replace xbmc/SeekHandler.cpp | Spulen wie tvOS kein Selbstsprung
+@@ replace xbmc/SeekHandler.cpp | Spulen wie das Vorbild kein Selbstsprung
   if (m_timer.GetElapsedMilliseconds() >= m_seekDelay && m_requireSeek)
 @@--
   // Glas: gestoppt oder anderer Film (auch ohne Taste: JSON-RPC, naechste Folge) - offenes Spulen verwerfen
@@ -1159,7 +1159,7 @@ analoge Spulen; mit anderen Skins bleibt alles wie bei Kodi.
   if (m_timer.GetElapsedMilliseconds() >= m_seekDelay && m_requireSeek && !m_glasConfirm) // Glas: wartet
 @@end
 
-@@ before xbmc/SeekHandler.cpp | Spulen wie tvOS Auswaehlen
+@@ before xbmc/SeekHandler.cpp | Spulen wie das Vorbild Auswaehlen
 bool CSeekHandler::OnAction(const CAction &action)
 @@--
 bool CSeekHandler::GlasConfirmAction(const CAction& action)
@@ -1183,7 +1183,7 @@ bool CSeekHandler::GlasConfirmAction(const CAction& action)
         Reset();
         m_seekChanged = true;
       }
-      // wie tvOS: von der neuen Stelle aus spielen
+      // wie das Vorbild: von der neuen Stelle aus spielen
       if (appPlayer->IsPausedPlayback())
         g_application.OnAction(CAction(ACTION_PAUSE));
       return true;
@@ -1211,11 +1211,11 @@ bool CSeekHandler::GlasConfirmAction(const CAction& action)
 
 @@end
 
-@@ after xbmc/application/Application.cpp | Spulen wie tvOS Eingang
+@@ after xbmc/application/Application.cpp | Spulen wie das Vorbild Eingang
 bool CApplication::OnAction(const CAction &action)
 {
 @@--
-  // Glas: Spulen wie tvOS - waehrend gespult wird, springt Auswaehlen/Play, Zurueck verwirft (SeekHandler.cpp)
+  // Glas: Spulen wie das Vorbild - waehrend gespult wird, springt Auswaehlen/Play, Zurueck verwirft (SeekHandler.cpp)
   if (GetComponent<CApplicationPlayer>()->GetSeekHandler().GlasConfirmAction(action))
     return true;
 

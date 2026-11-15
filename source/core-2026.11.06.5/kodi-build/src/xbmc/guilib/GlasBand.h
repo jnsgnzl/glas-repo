@@ -10,7 +10,7 @@
 
 /*!
 \file GlasBand.h
-\brief Gummiband am Ende einer Liste (skin.glas): ueber das Ende hinaus federt die Liste kurz nach wie in tvOS.
+\brief Gummiband am Ende einer Liste (skin.glas): ueber das Ende hinaus federt die Liste kurz nach wie in dem Vorbild.
 
  Kodi bleibt am Ende einer Liste oder Grouplist stumm stehen. Hier federt sie: Hoch/Runter (Links/Rechts bei
  waagerechten Listen) am Ende, wenn der Fokus nirgendwohin wandert, und das Mausrad, wenn die Liste nicht weiter rollt.
@@ -76,7 +76,7 @@ inline bool ReduceMotion()
   return reduce && reduce->Get(INFO::DEFAULT_CONTEXT);
 }
 
-//! Mit dem Glas-Skin laufen Listen und Grouplists ohne eigenes Ziel nicht im Kreis (tvOS kennt das nicht; Kodi springt
+//! Mit dem Glas-Skin laufen Listen und Grouplists ohne eigenes Ziel nicht im Kreis (das Vorbild kennt das nicht; Kodi springt
 //! sonst vom Anfang ans Ende und umgekehrt, und es gaebe kein Ende zum Federn). Ein ausdrueckliches Ziel auf sich selbst
 //! (<onup>eigene id</onup>) laeuft weiter im Kreis; andere Skins bleiben bei Kodi.
 inline bool GlasSkin()

@@ -213,13 +213,13 @@ Diagnose-Schalter auf der Vero:
 | `/tmp/glas-frames` | `GLAS_FRAMES` | gezeichnete Bilder in Bewegung, Bilder über 20 ms, längstes Bild |
 | `/tmp/glas-overdraw` | `GLAS_OVERDRAW` | gezeichnete Bildschirmflächen je Bild, größte Verursacher |
 
-## Liquid Glass (`<style>liquid</style>`)
+## Live-Glas (`<style>liquid</style>`)
 
-Eigenes Shader-Programm neben dem bisherigen (`frosted`, Vorgabe), angelehnt an tvOS 26:
+Eigenes Shader-Programm neben dem bisherigen (`frosted`, Vorgabe), angelehnt an das Vorbild:
 
 - **Lichtbrechung am Rand:** in einem Randband (bis 22 Skin-Pixel) holt der Shader den Hintergrund von weiter
   außen, teils aus dem schärferen Griff (erste Stufe, 1/4) – wie durch eine dicke Glaskante.
-- **Material hell wie tvOS 26:** 9 % Weiss (im Apple-Video gemessen: Glas über dunklem Inhalt heller als der
+- **Material hell wie das Vorbild:** 9 % Weiss (im Vorbild-Video gemessen: Glas über dunklem Inhalt heller als der
   Hintergrund); erst über sehr hellem Hintergrund bis 28 % dunkler, damit weisser Text lesbar bleibt.
 - **Lichtkante:** dünne helle Linie, oben links am stärksten, gegenüber schwächer, dazu weicher Schein innen.
 
@@ -228,7 +228,7 @@ Mit `liquid` zeichnet der Skin keine eigene Material-/Kantentextur mehr darüber
 
 ## Federkurven (`spring`) und Rückfall-Effekte (`glasfallback`)
 
-tvOS bewegt fast alles mit Federn. Kodi kennt nur feste Kurven, `back` schwingt immer um 10 % des Wegs über.
+das Vorbild bewegt fast alles mit Federn. Kodi kennt nur feste Kurven, `back` schwingt immer um 10 % des Wegs über.
 `src/xbmc/guilib/GlasTween.h` ergänzt eine Feder, `VisibleEffect.cpp` liest sie in `CAnimEffect::GetTweener`. Das gilt
 für Animationen und für `scrolltime`:
 
@@ -237,7 +237,7 @@ für Animationen und für `scrolltime`:
 <scrolltime tween="cubic" easing="out" spring="0">300</scrolltime>
 ```
 
-- `spring` ist `bounce` wie bei Apple: 0 ohne Überschwingen, 0,3 etwa 5 %, höchstens 0,9. Die Feder kommt genau am
+- `spring` ist `bounce` wie bei dem Vorbild: 0 ohne Überschwingen, 0,3 etwa 5 %, höchstens 0,9. Die Feder kommt genau am
   Ende von `time` zur Ruhe (Spitze bei 0,3 nach ≈ 45 % der Zeit). `easing` wie bei Kodi.
 - Kodi ohne diesen Build kennt `spring` nicht und nimmt `tween`. Deshalb nie `tween` weglassen.
 - `glasfallback="true"` an einem `<effect>`: Der Glas-Kern lässt den Effekt aus, jedes andere Kodi spielt ihn. So bleibt
@@ -248,7 +248,7 @@ für Animationen und für `scrolltime`:
 
 ## Wachsen um feste Pixel (Effekt `grow`)
 
-Kodis `zoom` skaliert ein ganzes Control samt Schrift und wächst prozentual. tvOS vergrößert Kapseln und Zeilen um
+Kodis `zoom` skaliert ein ganzes Control samt Schrift und wächst prozentual. das Vorbild vergrößert Kapseln und Zeilen um
 feste 4 px je Seite, die Schrift bleibt gleich groß. `src/xbmc/guilib/GlasGrow.h` und die Blöcke in
 `glas-patches.txt` ergänzen dafür einen Effekt ohne Transformation:
 
@@ -314,13 +314,13 @@ liefert, also nicht in der App TV mit ihren Reihen.
 
 `CGUIDialogYesNo::OnInitWindow` setzt vor den `onload`-Aktionen `glas.yesno = true` und `glas.destructive = true`,
 wenn Titel, Text oder Ja-Knopf „Löschen“ bzw. „Entfernen“ (117/15015 in der Sprache der Oberfläche) enthalten. Der Skin
-färbt den Ja-Knopf dann rot und setzt sonst den Fokus auf die Hauptaktion (Ja), wie tvOS. Kodi wählt sonst immer Nein.
+färbt den Ja-Knopf dann rot und setzt sonst den Fokus auf die Hauptaktion (Ja), wie das Vorbild. Kodi wählt sonst immer Nein.
 
 ## Richtung des Fensterwechsels
 
 `CGUIWindowManager` setzt `Window(Home).Property(glas.nav)` auf `back` (PreviousWindow, auch wenn es intern
 `ActivateWindow` aufruft) oder `forward`, bevor Fenster geschlossen und geöffnet werden. `Glas_OpenClose`: vorwärts
-250 ms, zurück 700 ms `quadratic out` (tvOS: 50 % nach ≈ 200 ms, lang auslaufend). Ohne Kern bleibt der Kompromiss 300 ms.
+250 ms, zurück 700 ms `quadratic out` (das Vorbild: 50 % nach ≈ 200 ms, lang auslaufend). Ohne Kern bleibt der Kompromiss 300 ms.
 
 ## Überblenden mit Kurve (`GlasFade.h`)
 

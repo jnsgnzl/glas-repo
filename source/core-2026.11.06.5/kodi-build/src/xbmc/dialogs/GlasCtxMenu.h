@@ -10,10 +10,10 @@
 
 /*!
 \file GlasCtxMenu.h
-\brief Kontextmenue wie tvOS (skin.glas): Symbol links vor jedem Eintrag, zerstoerende Eintraege rot.
+\brief Kontextmenue wie das Vorbild (skin.glas): Symbol links vor jedem Eintrag, zerstoerende Eintraege rot.
 
- tvOS 27.2 zeigt im Kontext- und Popover-Menue links ein Symbol je Eintrag, zerstoerende Aktionen in roter Schrift und im
- Fokus als rote Kapsel mit weisser Schrift (docs/tvos27-simulator-messwerte.md, Popover-Menues). Kodi kennt das nicht.
+ das Vorbild zeigt im Kontext- und Popover-Menue links ein Symbol je Eintrag, zerstoerende Aktionen in roter Schrift und im
+ Fokus als rote Kapsel mit weisser Schrift (docs/<Abgleich>, Popover-Menues). Kodi kennt das nicht.
  CGUIDialogContextMenu::SetupButtons fragt hier nach jedem Eintrag: das Symbol erkennt der Kern an Kodis Text-IDs (in
  jeder Sprache), es steht als Fenster-Eigenschaft glas.ctx.icon.<n> (n ab 0) fuer den Skin bereit (Bild
  glas/ctx-<name>.png, Grouplist 997 in DialogContextMenu.xml), glas.ctx.icons = 1, sobald ein Eintrag eines hat. Der Text
@@ -127,7 +127,7 @@ inline void Decorate(CGUIWindow& dialog, CGUIButtonControl& button, unsigned int
   {
     if (index < MAX_PROPS)
       dialog.SetProperty("glas.ctx.red." + std::to_string(index), "1"); // Symbol rot bzw. im Fokus weiss
-    button.GlasLabel().GetLabelInfo().textColor = 0xFFFF4F53;     // tvOS: rote Schrift (Dunkel #FF4F53)
+    button.GlasLabel().GetLabelInfo().textColor = 0xFFFF4F53;     // das Vorbild: rote Schrift (Dunkel #FF4F53)
     button.GlasLabel().GetLabelInfo().focusedColor = 0xFFFFFFFF;  // im Fokus weiss
     // auf roter Kapsel (#FF4245): ueber die Farbe des Controls, die Kodi in jedem Bild an beide Texturen gibt
     // (CGUIButtonControl::UpdateColors); die ruhende Textur ist leer

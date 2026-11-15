@@ -150,13 +150,13 @@ Diagnose-Schalter auf der Vero:
 | `/tmp/glas-frames` | `GLAS_FRAMES` | gezeichnete Bilder in Bewegung, Bilder über 20 ms, längstes Bild |
 | `/tmp/glas-overdraw` | `GLAS_OVERDRAW` | gezeichnete Bildschirmflächen je Bild, größte Verursacher |
 
-## Liquid Glass (`<style>liquid</style>`)
+## Live-Glas (`<style>liquid</style>`)
 
-Eigenes Shader-Programm neben dem bisherigen (`frosted`, Vorgabe), angelehnt an tvOS 26:
+Eigenes Shader-Programm neben dem bisherigen (`frosted`, Vorgabe), angelehnt an das Vorbild:
 
 - **Lichtbrechung am Rand:** in einem Randband (bis 22 Skin-Pixel) holt der Shader den Hintergrund von weiter
   außen, teils aus dem schärferen Griff (erste Stufe, 1/4) – wie durch eine dicke Glaskante.
-- **Material hell wie tvOS 26:** 9 % Weiss (im Apple-Video gemessen: Glas über dunklem Inhalt heller als der
+- **Material hell wie das Vorbild:** 9 % Weiss (im Vorbild-Video gemessen: Glas über dunklem Inhalt heller als der
   Hintergrund); erst über sehr hellem Hintergrund bis 28 % dunkler, damit weisser Text lesbar bleibt.
 - **Lichtkante:** dünne helle Linie, oben links am stärksten, gegenüber schwächer, dazu weicher Schein innen.
 

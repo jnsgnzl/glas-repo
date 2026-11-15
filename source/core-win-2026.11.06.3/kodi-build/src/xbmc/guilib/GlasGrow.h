@@ -12,7 +12,7 @@
 \file GlasGrow.h
 \brief Animationseffekt grow (skin.glas): Flaeche um feste Pixel wachsen lassen, ohne die Schrift zu strecken.
 
- tvOS vergroessert fokussierte Kapseln und Zeilen um feste Pixel je Seite (Einstellungszeilen 780 x 66 -> 788 x 74), die
+ das Vorbild vergroessert fokussierte Kapseln und Zeilen um feste Pixel je Seite (Einstellungszeilen 780 x 66 -> 788 x 74), die
  Schrift bleibt gleich gross und rueckt mit der Kante. Kodis zoom skaliert das ganze Control samt Text und waechst
  prozentual (lange Kapseln mehr als kurze; an Knoepfen mit width auto gar nicht sauber, weil der Zoom die Breite beim
  Laden nimmt):

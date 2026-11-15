@@ -12,14 +12,14 @@
 \file GlasTween.h
 \brief Federkurve fuer Animationen und Rollen (skin.glas): spring="<bounce>" neben tween/easing.
 
- tvOS bewegt fast alles mit Federn (Fokus, Popover, Seitenleiste). Kodi kennt nur feste Kurven; "back" schwingt immer
+ das Vorbild bewegt fast alles mit Federn (Fokus, Popover, Seitenleiste). Kodi kennt nur feste Kurven; "back" schwingt immer
  um 10 % der Strecke ueber. Die Feder ist ein gedaempfter Schwinger, der genau am Ende der Animation (time) zur Ruhe
  kommt:
 
    <animation effect="zoom" end="110" time="200" tween="cubic" easing="out" spring="0.3">Focus</animation>
    <scrolltime tween="cubic" easing="out" spring="0">300</scrolltime>
 
- spring = bounce wie bei Apple (SwiftUI spring(duration:bounce:)): 0 = ohne Ueberschwingen (kritisch gedaempft),
+ spring = bounce wie bei dem Vorbild (SwiftUI spring(duration:bounce:)): 0 = ohne Ueberschwingen (kritisch gedaempft),
  0,3 = etwa 5 % Ueberschwingen, hoechstens 0,9. Daempfung zeta = 1 - bounce. easing wie bei Kodi: out (Standard)
  = Feder am Ende, in = gespiegelt, inout = beides. Kodi ohne diesen Build kennt das Attribut nicht und nimmt tween.
 */

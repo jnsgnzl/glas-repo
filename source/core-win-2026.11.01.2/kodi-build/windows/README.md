@@ -91,7 +91,7 @@ beim Scrollen gleich wie ohne Live-Glas (Streuung 1–4 %). Über laufendem Vide
 Neu bauen nach Änderungen an den Glas-Quellen (PowerShell, dauert inkrementell wenige Minuten):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File C:\Users\janis\Projekte\Kodi-tvOS\tools\kodi-build\windows\apply-glas.ps1 -KodiDir C:\Users\KI\glas-win\kodi -VideoGlass
+powershell -ExecutionPolicy Bypass -File <Projekt>\tools\kodi-build\windows\apply-glas.ps1 -KodiDir C:\Users\KI\glas-win\kodi -VideoGlass
 $cmake = 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
 $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'WinLibs' }) -join ';'
 & $cmake --build C:\Users\KI\glas-win\build --config Release -- /m /v:minimal
@@ -182,8 +182,8 @@ Der eigene Build läuft **portabel**. Profil und Add-ons liegen dann in `portabl
 cd D:\glas-win\build\Release
 .\kodi.exe -p
 # einmal nach dem ersten Start: Skin und Helper aus dem Repo verknüpfen
-cmd /c mklink /J portable_data\addons\skin.glas C:\Users\janis\Projekte\Kodi-tvOS\skin.glas
-cmd /c mklink /J portable_data\addons\script.glas.helper C:\Users\janis\Projekte\Kodi-tvOS\script.glas.helper
+cmd /c mklink /J portable_data\addons\skin.glas <Projekt>\skin.glas
+cmd /c mklink /J portable_data\addons\script.glas.helper <Projekt>\script.glas.helper
 ```
 
 - Startlog prüfen: `portable_data\kodi.log` enthält die Glas-Zeile (siehe oben).
