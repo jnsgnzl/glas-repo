@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="script.glas.kerntest" name="Glas Kerntest (LibreELEC)" version="1.0.2" provider-name="Glas">
+	<requires>
+		<import addon="xbmc.python" version="3.0.1" />
+	</requires>
+	<extension point="xbmc.python.script" library="default.py">
+		<provides>executable</provides>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary lang="de_DE">Live-Glas-Kern auf LibreELEC bis zum naechsten Neustart einbinden</summary>
+		<summary lang="en_GB">Mount the live glass core on LibreELEC until the next reboot</summary>
+		<description lang="de_DE">Nur zum Testen. Kopiert den mitgelieferten Kern nach /storage/glas, bindet ihn ueber Kodi und startet Kodi neu. Ein Neustart des Rechners stellt LibreELECs Kodi wieder her. Sichert die Logs auf die Startpartition des Sticks (Ordner glas-logs), weil sie im Live-Modus sonst mit dem Ausschalten verloren gehen.</description>
+		<platform>linux</platform>
+	</extension>
+</addon>

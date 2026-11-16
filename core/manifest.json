@@ -1,6 +1,18 @@
 {
   "builds": [
     {
+      "id": "2026.11.16",
+      "device": "le-generic.x86_64",
+      "libreelec": "12.2.1",
+      "kodi": "21.3",
+      "url": "https://github.com/jnsgnzl/glas-repo/releases/download/core-le-2026.11.16/kodi.bin.xz",
+      "sha256": "d6d8c89a4ada796364439e459e1b54e8ca52532777d30c7b81ba2d430fab7a92",
+      "size": 26277424,
+      "xz_size": 7973100,
+      "source": "https://github.com/jnsgnzl/glas-repo/tree/main/source/core-le-2026.11.16",
+      "kodi_sha256": "12195e66fdddd378a1258de0ef6c5150d52c14812dfd939dfffa6b8361e173a5"
+    },
+    {
       "id": "2026.10.17",
       "device": "vero5",
       "osmc": "21.3.0-7",
